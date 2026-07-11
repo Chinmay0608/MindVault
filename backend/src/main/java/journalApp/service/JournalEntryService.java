@@ -31,6 +31,26 @@ public class JournalEntryService {
         try {
             User user = userService.findByUserName(userName);
             journalEntry.setDate(LocalDateTime.now());
+            calculateMetadataAndTags(journalEntry);
+
+            // Streak Tracking
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate last = user.getLastJournaledDate();
+            if (last == null) {
+                user.setCurrentStreak(1);
+                user.setLongestStreak(Math.max(user.getLongestStreak() == null ? 0 : user.getLongestStreak(), 1));
+            } else {
+                long diff = java.time.temporal.ChronoUnit.DAYS.between(last, today);
+                if (diff == 1) {
+                    int next = (user.getCurrentStreak() == null ? 0 : user.getCurrentStreak()) + 1;
+                    user.setCurrentStreak(next);
+                    user.setLongestStreak(Math.max(user.getLongestStreak() == null ? 0 : user.getLongestStreak(), next));
+                } else if (diff > 1) {
+                    user.setCurrentStreak(1);
+                }
+            }
+            user.setLastJournaledDate(today);
+
             JournalEntry saved = journalEntryRepository.save(journalEntry);
             if (user.getJournalEntries() == null) {
                 user.setJournalEntries(new java.util.ArrayList<>());
@@ -43,7 +63,47 @@ public class JournalEntryService {
     }
 
     public void saveEntry(JournalEntry journalEntry) {
+        calculateMetadataAndTags(journalEntry);
         journalEntryRepository.save(journalEntry);
+    }
+
+    private void calculateMetadataAndTags(JournalEntry entry) {
+        String content = entry.getContent();
+        if (content == null) {
+            entry.setWordCount(0);
+            entry.setReadingTime(0);
+            return;
+        }
+        String trimmed = content.trim();
+        if (trimmed.isEmpty()) {
+            entry.setWordCount(0);
+            entry.setReadingTime(0);
+        } else {
+            String[] words = trimmed.split("\\s+");
+            entry.setWordCount(words.length);
+            // Reading speed ~200 WPM => seconds = (words * 60) / 200 = words * 0.3
+            entry.setReadingTime((int) Math.ceil((words.length * 60.0) / 200.0));
+        }
+
+        // Parse hashtags
+        java.util.List<String> parsedTags = new java.util.ArrayList<>();
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("#(\\w+)");
+        java.util.regex.Matcher matcher = pattern.matcher(content);
+        while (matcher.find()) {
+            String tag = matcher.group(1).toLowerCase();
+            if (!parsedTags.contains(tag)) {
+                parsedTags.add(tag);
+            }
+        }
+        if (entry.getTags() == null) {
+            entry.setTags(parsedTags);
+        } else {
+            for (String t : parsedTags) {
+                if (!entry.getTags().contains(t)) {
+                    entry.getTags().add(t);
+                }
+            }
+        }
     }
 
     public List<JournalEntry> getAll() {

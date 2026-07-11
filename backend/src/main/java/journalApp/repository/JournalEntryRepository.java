@@ -9,4 +9,8 @@ import java.util.List;
 
 public interface JournalEntryRepository extends MongoRepository<JournalEntry, ObjectId> {
     Page<JournalEntry> findByIdIn(List<ObjectId> ids, Pageable pageable);
+    Page<JournalEntry> findByIdInAndTagsContaining(List<ObjectId> ids, String tag, Pageable pageable);
+
+    @org.springframework.data.mongodb.repository.Query("{ 'id': { '$in': ?0 }, '$or': [ { 'title': { '$regex': ?1, '$options': 'i' } }, { 'content': { '$regex': ?1, '$options': 'i' } } ] }")
+    Page<JournalEntry> searchEntries(List<ObjectId> ids, String keyword, Pageable pageable);
 }

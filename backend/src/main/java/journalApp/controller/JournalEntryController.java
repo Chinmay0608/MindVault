@@ -93,11 +93,12 @@ public class JournalEntryController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all journal entries of a user with pagination")
+    @Operation(summary = "Get all journal entries of a user with optional tag filtering and pagination")
     public ResponseEntity<?> getAllJournalEntriesOfUser(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "date,desc") String sort) {
+            @RequestParam(defaultValue = "date,desc") String sort,
+            @RequestParam(required = false) String tag) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         User user = userService.findByUserName(userName);
@@ -127,7 +128,59 @@ public class JournalEntryController {
                 : org.springframework.data.domain.Sort.Direction.DESC;
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(direction, sortParts[0]));
 
-        org.springframework.data.domain.Page<JournalEntry> paged = journalEntryRepository.findByIdIn(ids, pageable);
+        org.springframework.data.domain.Page<JournalEntry> paged;
+        if (tag != null && !tag.trim().isEmpty()) {
+            paged = journalEntryRepository.findByIdInAndTagsContaining(ids, tag.trim().toLowerCase(), pageable);
+        } else {
+            paged = journalEntryRepository.findByIdIn(ids, pageable);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", paged.getContent());
+        response.put("totalPages", paged.getTotalPages());
+        response.put("totalElements", paged.getTotalElements());
+        response.put("size", paged.getSize());
+        response.put("number", paged.getNumber());
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Full-text search across journal entries of the user")
+    public ResponseEntity<?> searchJournalEntries(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "date,desc") String sort) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        User user = userService.findByUserName(userName);
+        if (user == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        List<JournalEntry> allEntries = user.getJournalEntries();
+        if (allEntries == null || allEntries.isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", new ArrayList<>());
+            response.put("totalPages", 0);
+            response.put("totalElements", 0L);
+            response.put("size", size);
+            response.put("number", page);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        List<ObjectId> ids = allEntries.stream()
+                .filter(Objects::nonNull)
+                .map(JournalEntry::getId)
+                .collect(Collectors.toList());
+
+        String[] sortParts = sort.split(",");
+        org.springframework.data.domain.Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc") 
+                ? org.springframework.data.domain.Sort.Direction.ASC 
+                : org.springframework.data.domain.Sort.Direction.DESC;
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(direction, sortParts[0]));
+
+        org.springframework.data.domain.Page<JournalEntry> paged = journalEntryRepository.searchEntries(ids, q, pageable);
         Map<String, Object> response = new HashMap<>();
         response.put("content", paged.getContent());
         response.put("totalPages", paged.getTotalPages());

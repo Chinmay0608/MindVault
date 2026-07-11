@@ -23,5 +23,8 @@ public class JournalEntry {
     private Sentiment sentiment;
     private String aiInsight;
     private String sentimentScore;
-    private LocalDateTime sentimentAnalyzedAt;
+    private java.time.LocalDateTime sentimentAnalyzedAt;
+    private java.util.List<String> tags;
+    private Integer wordCount;
+    private Integer readingTime; // In seconds
 }

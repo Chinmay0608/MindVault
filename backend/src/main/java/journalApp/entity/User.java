@@ -40,4 +40,10 @@ public class User {
 
     private List<String> roles;
     private String location;
+    
+    @Builder.Default
+    private Integer currentStreak = 0;
+    @Builder.Default
+    private Integer longestStreak = 0;
+    private java.time.LocalDate lastJournaledDate;
 }
