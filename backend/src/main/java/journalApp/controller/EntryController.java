@@ -2,10 +2,10 @@ package journalApp.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import journalApp.entity.JournalEntry;
-import journalApp.entity.User;
-import journalApp.service.JournalEntryService;
-import journalApp.service.UserService;
+import journalApp.entity.JournalRecord;
+import journalApp.entity.UserAccount;
+import journalApp.service.EntryService;
+import journalApp.service.AccountService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,16 +20,16 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping({"", "/", "/journal", "/journal/", "/api/journals", "/api/journals/"})
 @Tag(name = "Journal APIs")
-public class JournalEntryController {
+public class EntryController {
 
     @Autowired
-    private JournalEntryService journalEntryService;
+    private EntryService entryService;
 
     @Autowired
-    private journalApp.repository.JournalEntryRepository journalEntryRepository;
+    private journalApp.repository.EntryRepository entryRepository;
 
     @Autowired
-    private UserService userService;
+    private AccountService accountService;
 
     @Autowired
     private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
@@ -49,19 +49,19 @@ public class JournalEntryController {
         ObjectId objectId = new ObjectId(myId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User user = userService.findByUserName(userName);
+        UserAccount user = accountService.findByUserName(userName);
         
-        List<JournalEntry> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(objectId)).collect(Collectors.toList());
+        List<JournalRecord> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(objectId)).collect(Collectors.toList());
         if (collect.isEmpty()) {
             throw new journalApp.exception.JournalNotFoundException("Journal entry not found with ID: " + myId);
         }
 
-        Optional<JournalEntry> journalEntryOpt = journalEntryService.findById(objectId);
+        Optional<JournalRecord> journalEntryOpt = entryService.findById(objectId);
         if (journalEntryOpt.isEmpty()) {
             throw new journalApp.exception.JournalNotFoundException("Journal entry not found with ID: " + myId);
         }
 
-        JournalEntry entry = journalEntryOpt.get();
+        JournalRecord entry = journalEntryOpt.get();
         if (entry.getSentimentScore() == null) {
             String score;
             try {
@@ -82,7 +82,7 @@ public class JournalEntryController {
             }
             entry.setAiInsight(insight);
             
-            journalEntryService.saveEntry(entry);
+            entryService.saveEntry(entry);
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -101,12 +101,12 @@ public class JournalEntryController {
             @RequestParam(required = false) String tag) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User user = userService.findByUserName(userName);
+        UserAccount user = accountService.findByUserName(userName);
         if (user == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
         
-        List<JournalEntry> allEntries = user.getJournalEntries();
+        List<JournalRecord> allEntries = user.getJournalEntries();
         if (allEntries == null || allEntries.isEmpty()) {
             Map<String, Object> response = new HashMap<>();
             response.put("content", new ArrayList<>());
@@ -119,7 +119,7 @@ public class JournalEntryController {
 
         List<ObjectId> ids = allEntries.stream()
                 .filter(Objects::nonNull)
-                .map(JournalEntry::getId)
+                .map(JournalRecord::getId)
                 .collect(Collectors.toList());
 
         String[] sortParts = sort.split(",");
@@ -128,11 +128,11 @@ public class JournalEntryController {
                 : org.springframework.data.domain.Sort.Direction.DESC;
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(direction, sortParts[0]));
 
-        org.springframework.data.domain.Page<JournalEntry> paged;
+        org.springframework.data.domain.Page<JournalRecord> paged;
         if (tag != null && !tag.trim().isEmpty()) {
-            paged = journalEntryRepository.findByIdInAndTagsContaining(ids, tag.trim().toLowerCase(), pageable);
+            paged = entryRepository.findByIdInAndTagsContaining(ids, tag.trim().toLowerCase(), pageable);
         } else {
-            paged = journalEntryRepository.findByIdIn(ids, pageable);
+            paged = entryRepository.findByIdIn(ids, pageable);
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -153,12 +153,12 @@ public class JournalEntryController {
             @RequestParam(defaultValue = "date,desc") String sort) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User user = userService.findByUserName(userName);
+        UserAccount user = accountService.findByUserName(userName);
         if (user == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        List<JournalEntry> allEntries = user.getJournalEntries();
+        List<JournalRecord> allEntries = user.getJournalEntries();
         if (allEntries == null || allEntries.isEmpty()) {
             Map<String, Object> response = new HashMap<>();
             response.put("content", new ArrayList<>());
@@ -171,7 +171,7 @@ public class JournalEntryController {
 
         List<ObjectId> ids = allEntries.stream()
                 .filter(Objects::nonNull)
-                .map(JournalEntry::getId)
+                .map(JournalRecord::getId)
                 .collect(Collectors.toList());
 
         String[] sortParts = sort.split(",");
@@ -180,7 +180,7 @@ public class JournalEntryController {
                 : org.springframework.data.domain.Sort.Direction.DESC;
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(direction, sortParts[0]));
 
-        org.springframework.data.domain.Page<JournalEntry> paged = journalEntryRepository.searchEntries(ids, q, pageable);
+        org.springframework.data.domain.Page<JournalRecord> paged = entryRepository.searchEntries(ids, q, pageable);
         Map<String, Object> response = new HashMap<>();
         response.put("content", paged.getContent());
         response.put("totalPages", paged.getTotalPages());
@@ -202,13 +202,13 @@ public class JournalEntryController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userName = authentication.getName();
-            User user = userService.findByUserName(userName);
+            UserAccount user = accountService.findByUserName(userName);
             if (user == null) {
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
 
-            List<JournalEntry> entries = user.getJournalEntries();
-            List<JournalEntry> lastThree = entries.stream()
+            List<JournalRecord> entries = user.getJournalEntries();
+            List<JournalRecord> lastThree = entries.stream()
                 .filter(e -> e != null && e.getSentiment() != null && e.getDate() != null)
                 .sorted((e1, e2) -> e2.getDate().compareTo(e1.getDate()))
                 .limit(3)
@@ -217,7 +217,7 @@ public class JournalEntryController {
             journalApp.enums.Sentiment dominantSentiment = journalApp.enums.Sentiment.HAPPY;
             if (!lastThree.isEmpty()) {
                 Map<journalApp.enums.Sentiment, Integer> frequency = new HashMap<>();
-                for (JournalEntry entry : lastThree) {
+                for (JournalRecord entry : lastThree) {
                     frequency.put(entry.getSentiment(), frequency.getOrDefault(entry.getSentiment(), 0) + 1);
                 }
                 int maxCount = 0;
@@ -243,11 +243,12 @@ public class JournalEntryController {
     }
 
     @PostMapping
-    public ResponseEntity<JournalEntry> createEntry(@jakarta.validation.Valid @RequestBody JournalEntry myEntry) {
+    public ResponseEntity<JournalRecord> createEntry(@jakarta.validation.Valid @RequestBody JournalRecord myEntry) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userName = authentication.getName();
-            journalEntryService.saveEntry(myEntry, userName);
+            entryService.saveEntry(myEntry, userName);
+
             if (kafkaEnabled) {
                 try {
                     journalApp.model.EntryCreatedEvent event = new journalApp.model.EntryCreatedEvent(myEntry.getId().toString(), myEntry.getContent());
@@ -281,7 +282,7 @@ public class JournalEntryController {
                         insight = "Your writing carries a calm, neutral, and balanced tone.";
                     }
                     myEntry.setAiInsight(insight);
-                    journalEntryService.saveEntry(myEntry);
+                    entryService.saveEntry(myEntry);
                 } catch (Exception e) {
                     // Fallback
                 }
@@ -298,10 +299,10 @@ public class JournalEntryController {
         ObjectId objectId = new ObjectId(myId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User user = userService.findByUserName(userName);
-        List<JournalEntry> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(objectId)).collect(Collectors.toList());
+        UserAccount user = accountService.findByUserName(userName);
+        List<JournalRecord> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(objectId)).collect(Collectors.toList());
         if (!collect.isEmpty()) {
-            Optional<JournalEntry> journalEntry = journalEntryService.findById(objectId);
+            Optional<JournalRecord> journalEntry = entryService.findById(objectId);
             if (journalEntry.isPresent()) {
                 return new ResponseEntity<>(journalEntry.get(), HttpStatus.OK);
             }
@@ -313,29 +314,29 @@ public class JournalEntryController {
     public ResponseEntity<?> deleteJournalEntryById(@PathVariable ObjectId myId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        boolean removed = journalEntryService.deleteById(myId, username);
+        boolean removed = entryService.deleteById(myId, username);
         if (removed) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else{
+        } else {
             throw new journalApp.exception.JournalNotFoundException("Journal entry not found with ID: " + myId);
         }
     }
 
     @PutMapping({"id/{myId}", "/{myId}"})
-    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId myId, @jakarta.validation.Valid @RequestBody JournalEntry newEntry) {
+    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId myId, @jakarta.validation.Valid @RequestBody JournalRecord newEntry) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User user = userService.findByUserName(userName);
+        UserAccount user = accountService.findByUserName(userName);
         if (user.getJournalEntries() != null) {
-            List<JournalEntry> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(myId)).collect(Collectors.toList());
+            List<JournalRecord> collect = user.getJournalEntries().stream().filter(x -> x.getId().equals(myId)).collect(Collectors.toList());
             if (!collect.isEmpty()) {
-                Optional<JournalEntry> journalEntry = journalEntryService.findById(myId);
+                Optional<JournalRecord> journalEntry = entryService.findById(myId);
                 if (journalEntry.isPresent()) {
-                    JournalEntry old = journalEntry.get();
+                    JournalRecord old = journalEntry.get();
                     old.setTitle(newEntry.getTitle() != null && !newEntry.getTitle().equals("") ? newEntry.getTitle() : old.getTitle());
                     old.setContent(newEntry.getContent() != null && !newEntry.getContent().equals("") ? newEntry.getContent() : old.getContent());
                     old.setSentiment(newEntry.getSentiment() != null ? newEntry.getSentiment() : old.getSentiment());
-                    journalEntryService.saveEntry(old);
+                    entryService.saveEntry(old);
                     if (kafkaEnabled) {
                         try {
                             journalApp.model.JournalSavedEvent savedEvent = new journalApp.model.JournalSavedEvent(old.getId().toString(), old.getContent());
@@ -350,6 +351,4 @@ public class JournalEntryController {
         }
         throw new journalApp.exception.JournalNotFoundException("Journal entry not found with ID: " + myId);
     }
-
-
 }

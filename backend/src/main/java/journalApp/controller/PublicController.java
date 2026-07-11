@@ -3,9 +3,9 @@ package journalApp.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import journalApp.dto.UserDTO;
-import journalApp.entity.User;
+import journalApp.entity.UserAccount;
 import journalApp.service.UserDetailsServiceImpl;
-import journalApp.service.UserService;
+import journalApp.service.AccountService;
 import journalApp.utilis.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,10 +26,10 @@ public class PublicController {
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
     @Autowired
-    private UserService userService;
+    private AccountService accountService;
 
     @Autowired
-    private journalApp.repository.UserRepository userRepository;
+    private journalApp.repository.AccountRepository accountRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -63,18 +63,18 @@ public class PublicController {
             
             String normalizedUsername = email.split("@")[0].replaceAll("[^a-zA-Z0-9]", "");
             
-            User user = userRepository.findByEmail(email);
+            UserAccount user = accountRepository.findByEmail(email);
             if (user == null) {
-                if (userService.findByUserName(normalizedUsername) != null) {
+                if (accountService.findByUserName(normalizedUsername) != null) {
                     normalizedUsername += "_" + (int)(Math.random() * 1000);
                 }
                 
-                user = new User();
+                user = new UserAccount();
                 user.setEmail(email);
                 user.setUserName(normalizedUsername);
                 user.setPassword(java.util.UUID.randomUUID().toString());
                 user.setSentimentAnalysis(true);
-                userService.saveNewUser(user);
+                accountService.saveNewUser(user);
             }
             
             String jwt = jwtUtil.generateToken(user.getUserName());
@@ -102,19 +102,19 @@ public class PublicController {
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@jakarta.validation.Valid @RequestBody UserDTO user) {
         String normalizedUsername = user.getUserName().toLowerCase().trim();
-        if (userService.findByUserName(normalizedUsername) != null) {
+        if (accountService.findByUserName(normalizedUsername) != null) {
             return new ResponseEntity<>(java.util.Map.of("message", "Username already taken"), HttpStatus.CONFLICT);
         }
-        if (user.getEmail() != null && userRepository.findByEmail(user.getEmail().trim()) != null) {
+        if (user.getEmail() != null && accountRepository.findByEmail(user.getEmail().trim()) != null) {
             return new ResponseEntity<>(java.util.Map.of("message", "Email already registered"), HttpStatus.CONFLICT);
         }
 
-        User newUser = new User();
+        UserAccount newUser = new UserAccount();
         newUser.setEmail(user.getEmail().trim());
         newUser.setUserName(normalizedUsername);
         newUser.setPassword(user.getPassword());
         newUser.setSentimentAnalysis(user.isSentimentAnalysis());
-        boolean saved = userService.saveNewUser(newUser);
+        boolean saved = accountService.saveNewUser(newUser);
         if (saved) {
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);
         }
@@ -122,7 +122,7 @@ public class PublicController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User user, jakarta.servlet.http.HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody UserAccount user, jakarta.servlet.http.HttpServletResponse response) {
         try{
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUserName(), user.getPassword()));

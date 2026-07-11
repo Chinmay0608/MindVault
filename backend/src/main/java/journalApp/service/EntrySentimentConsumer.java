@@ -1,9 +1,9 @@
 package journalApp.service;
 
-import journalApp.entity.JournalEntry;
+import journalApp.entity.JournalRecord;
 import journalApp.enums.Sentiment;
 import journalApp.model.EntryCreatedEvent;
-import journalApp.repository.JournalEntryRepository;
+import journalApp.repository.EntryRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class JournalEntrySentimentConsumer {
+public class EntrySentimentConsumer {
 
     @Autowired
     private ClaudeSentimentService claudeSentimentService;
@@ -21,7 +21,7 @@ public class JournalEntrySentimentConsumer {
     private LocalSentimentScorer localSentimentScorer;
 
     @Autowired
-    private JournalEntryRepository journalEntryRepository;
+    private EntryRepository entryRepository;
 
     @KafkaListener(topics = "entry-created", groupId = "journal-entry-sentiment-group")
     public void consume(EntryCreatedEvent event) {
@@ -42,12 +42,12 @@ public class JournalEntrySentimentConsumer {
         }
 
         try {
-            Optional<JournalEntry> optionalEntry = journalEntryRepository.findById(new ObjectId(entryId));
+            Optional<JournalRecord> optionalEntry = entryRepository.findById(new ObjectId(entryId));
             if (optionalEntry.isPresent()) {
-                JournalEntry entry = optionalEntry.get();
+                JournalRecord entry = optionalEntry.get();
                 entry.setSentiment(sentiment);
                 entry.setAiInsight(aiInsight);
-                journalEntryRepository.save(entry);
+                entryRepository.save(entry);
             }
         } catch (Exception ex) {
             // Suppress error in background task

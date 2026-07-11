@@ -5,12 +5,11 @@ import journalApp.enums.Sentiment;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import java.time.LocalDateTime;
 
 @Document(collection = "journal_entries")
 @Data
 @NoArgsConstructor
-public class JournalEntry {
+public class JournalRecord {
     @Id
     @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
     private ObjectId id;
@@ -19,7 +18,7 @@ public class JournalEntry {
     private String title;
     @jakarta.validation.constraints.NotBlank(message = "Content cannot be blank")
     private String content;
-    private LocalDateTime date;
+    private java.time.LocalDateTime date;
     private Sentiment sentiment;
     private String aiInsight;
     private String sentimentScore;

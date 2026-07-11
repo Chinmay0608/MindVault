@@ -1,14 +1,11 @@
 package journalApp.service;
 
 import lombok.extern.slf4j.Slf4j;
-import journalApp.entity.JournalEntry;
-import journalApp.entity.User;
-import journalApp.repository.JournalEntryRepository;
+import journalApp.entity.JournalRecord;
+import journalApp.entity.UserAccount;
+import journalApp.repository.EntryRepository;
 import org.bson.types.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,18 +15,18 @@ import java.util.Optional;
 
 @Service
 @Slf4j
-public class JournalEntryService {
+public class EntryService {
 
     @Autowired
-    private JournalEntryRepository journalEntryRepository;
+    private EntryRepository entryRepository;
 
     @Autowired
-    private UserService userService;
+    private AccountService accountService;
 
     @Transactional
-    public void saveEntry(JournalEntry journalEntry, String userName) {
+    public void saveEntry(JournalRecord journalEntry, String userName) {
         try {
-            User user = userService.findByUserName(userName);
+            UserAccount user = accountService.findByUserName(userName);
             journalEntry.setDate(LocalDateTime.now());
             calculateMetadataAndTags(journalEntry);
 
@@ -51,23 +48,23 @@ public class JournalEntryService {
             }
             user.setLastJournaledDate(today);
 
-            JournalEntry saved = journalEntryRepository.save(journalEntry);
+            JournalRecord saved = entryRepository.save(journalEntry);
             if (user.getJournalEntries() == null) {
                 user.setJournalEntries(new java.util.ArrayList<>());
             }
             user.getJournalEntries().add(saved);
-            userService.saveUser(user);
+            accountService.saveUser(user);
         } catch (Exception e) {
             throw new RuntimeException("An error occurred while saving the entry.", e);
         }
     }
 
-    public void saveEntry(JournalEntry journalEntry) {
+    public void saveEntry(JournalRecord journalEntry) {
         calculateMetadataAndTags(journalEntry);
-        journalEntryRepository.save(journalEntry);
+        entryRepository.save(journalEntry);
     }
 
-    private void calculateMetadataAndTags(JournalEntry entry) {
+    private void calculateMetadataAndTags(JournalRecord entry) {
         String content = entry.getContent();
         if (content == null) {
             entry.setWordCount(0);
@@ -106,31 +103,30 @@ public class JournalEntryService {
         }
     }
 
-    public List<JournalEntry> getAll() {
-        return journalEntryRepository.findAll();
+    public List<JournalRecord> getAll() {
+        return entryRepository.findAll();
     }
 
-    public Optional<JournalEntry> findById(ObjectId id) {
-        return journalEntryRepository.findById(id);
+    public Optional<JournalRecord> findById(ObjectId id) {
+        return entryRepository.findById(id);
     }
 
     @Transactional
     public boolean deleteById(ObjectId id, String userName) {
         boolean removed = false;
         try {
-            User user = userService.findByUserName(userName);
+            UserAccount user = accountService.findByUserName(userName);
             if (user.getJournalEntries() != null) {
                 removed = user.getJournalEntries().removeIf(x -> x.getId().equals(id));
             }
             if (removed) {
-                userService.saveUser(user);
-                journalEntryRepository.deleteById(id);
+                accountService.saveUser(user);
+                entryRepository.deleteById(id);
             }
         } catch (Exception e) {
-            log.error("Error ",e);
+            log.error("Error ", e);
             throw new RuntimeException("An error occurred while deleting the entry.", e);
         }
         return removed;
     }
-
 }

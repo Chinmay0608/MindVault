@@ -14,7 +14,7 @@ public class SentimentConsumerService {
     private EmailService emailService;
 
     @Autowired
-    private journalApp.repository.UserRepository userRepository;
+    private journalApp.repository.AccountRepository userRepository;
 
     @Autowired
     private ClaudeSentimentService claudeSentimentService;
@@ -27,11 +27,11 @@ public class SentimentConsumerService {
     private void sendEmail(SentimentData sentimentData) {
         String emailBody = sentimentData.getSentiment();
         try {
-            journalApp.entity.User user = userRepository.findByEmail(sentimentData.getEmail());
+            journalApp.entity.UserAccount user = userRepository.findByEmail(sentimentData.getEmail());
             if (user != null) {
                 java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minus(7, java.time.temporal.ChronoUnit.DAYS);
                 java.util.List<String> entryDetails = new java.util.ArrayList<>();
-                for (journalApp.entity.JournalEntry entry : user.getJournalEntries()) {
+                for (journalApp.entity.JournalRecord entry : user.getJournalEntries()) {
                     if (entry != null && entry.getDate() != null && entry.getDate().isAfter(sevenDaysAgo)) {
                         String detail = "- Title: " + entry.getTitle();
                         if (entry.getAiInsight() != null) {

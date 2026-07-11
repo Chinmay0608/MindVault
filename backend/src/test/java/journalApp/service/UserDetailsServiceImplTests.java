@@ -1,7 +1,7 @@
 package journalApp.service;
 
-import journalApp.entity.User;
-import journalApp.repository.UserRepository;
+import journalApp.entity.UserAccount;
+import journalApp.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.*;
 import org.mockito.ArgumentMatchers;
@@ -22,7 +22,7 @@ public class UserDetailsServiceImplTests {
     private UserDetailsServiceImpl userDetailsService;
 
     @Mock
-    private UserRepository userRepository;
+    private AccountRepository userRepository;
 
     @BeforeEach
     void setUp(){
@@ -32,7 +32,7 @@ public class UserDetailsServiceImplTests {
     @Disabled
     @Test
     void loadUserByUsernameTest(){
-        when(userRepository.findByUserName(ArgumentMatchers.anyString())).thenReturn(User.builder().userName("ram").password("inrinrick").roles(new ArrayList<>()).build());
+        when(userRepository.findByUserName(ArgumentMatchers.anyString())).thenReturn(UserAccount.builder().userName("ram").password("inrinrick").roles(new ArrayList<>()).build());
         UserDetails user = userDetailsService.loadUserByUsername("ram");
         Assertions.assertNotNull(user);
     }

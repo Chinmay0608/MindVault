@@ -1,7 +1,7 @@
 package journalApp.config;
 
-import journalApp.entity.User;
-import journalApp.repository.UserRepository;
+import journalApp.entity.UserAccount;
+import journalApp.repository.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -11,13 +11,13 @@ import java.util.List;
 public class UsernameMigration implements CommandLineRunner {
 
     @Autowired
-    private UserRepository userRepository;
+    private AccountRepository userRepository;
 
     @Override
     public void run(String... args) throws Exception {
         try {
-            List<User> users = userRepository.findAll();
-            for (User user : users) {
+            List<UserAccount> users = userRepository.findAll();
+            for (UserAccount user : users) {
                 if (user.getUserName() != null) {
                     String original = user.getUserName();
                     String normalized = original.toLowerCase().trim();

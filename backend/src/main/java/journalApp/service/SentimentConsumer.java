@@ -1,8 +1,8 @@
 package journalApp.service;
 
-import journalApp.entity.JournalEntry;
+import journalApp.entity.JournalRecord;
 import journalApp.model.JournalSavedEvent;
-import journalApp.repository.JournalEntryRepository;
+import journalApp.repository.EntryRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -21,7 +21,7 @@ public class SentimentConsumer {
     private LexiconSentimentService lexiconSentimentService;
 
     @Autowired
-    private JournalEntryRepository journalEntryRepository;
+    private EntryRepository entryRepository;
 
     @KafkaListener(topics = "journal-sentiment-analysis", groupId = "weekly-sentiment-group")
     public void consume(JournalSavedEvent event) {
@@ -40,9 +40,9 @@ public class SentimentConsumer {
         }
 
         try {
-            Optional<JournalEntry> optionalEntry = journalEntryRepository.findById(new ObjectId(journalId));
+            Optional<JournalRecord> optionalEntry = entryRepository.findById(new ObjectId(journalId));
             if (optionalEntry.isPresent()) {
-                JournalEntry entry = optionalEntry.get();
+                JournalRecord entry = optionalEntry.get();
                 entry.setSentimentScore(sentimentScore);
                 entry.setSentimentAnalyzedAt(LocalDateTime.now());
                 
@@ -56,7 +56,7 @@ public class SentimentConsumer {
                 }
                 entry.setAiInsight(insight);
                 
-                journalEntryRepository.save(entry);
+                entryRepository.save(entry);
             }
         } catch (Exception ex) {
             // Safe fallback

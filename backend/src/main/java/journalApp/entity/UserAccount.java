@@ -15,7 +15,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class UserAccount {
 
     @Id
     @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
@@ -36,7 +36,7 @@ public class User {
     @Builder.Default
     @DBRef
     @com.fasterxml.jackson.annotation.JsonIgnore
-    private List<JournalEntry> journalEntries = new ArrayList<>();
+    private List<JournalRecord> journalEntries = new ArrayList<>();
 
     private List<String> roles;
     private String location;

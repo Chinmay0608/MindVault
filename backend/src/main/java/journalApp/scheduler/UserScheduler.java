@@ -1,11 +1,11 @@
 package journalApp.scheduler;
 
 import journalApp.cache.AppCache;
-import journalApp.entity.JournalEntry;
-import journalApp.entity.User;
+import journalApp.entity.JournalRecord;
+import journalApp.entity.UserAccount;
 import journalApp.enums.Sentiment;
 import journalApp.model.SentimentData;
-import journalApp.repository.UserRepositoryImpl;
+import journalApp.repository.AccountRepositoryImpl;
 import journalApp.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -26,7 +26,7 @@ public class UserScheduler {
     private EmailService emailService;
 
     @Autowired
-    private UserRepositoryImpl userRepository;
+    private AccountRepositoryImpl userRepository;
 
     @Autowired
     private AppCache appCache;
@@ -36,9 +36,9 @@ public class UserScheduler {
 
     @Scheduled(cron = "0 0 9 * * SUN")
     public void fetchUsersAndSendSaMail() {
-        List<User> users = userRepository.getUserForSA();
-        for (User user : users) {
-            List<JournalEntry> journalEntries = user.getJournalEntries();
+        List<UserAccount> users = userRepository.getUserForSA();
+        for (UserAccount user : users) {
+            List<JournalRecord> journalEntries = user.getJournalEntries();
             List<Sentiment> sentiments = journalEntries.stream().filter(x -> x.getDate().isAfter(LocalDateTime.now().minus(7, ChronoUnit.DAYS))).map(x -> x.getSentiment()).collect(Collectors.toList());
             Map<Sentiment, Integer> sentimentCounts = new HashMap<>();
             for (Sentiment sentiment : sentiments) {

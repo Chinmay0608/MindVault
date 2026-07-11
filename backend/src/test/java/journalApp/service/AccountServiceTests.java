@@ -1,7 +1,7 @@
 package journalApp.service;
 
-import journalApp.entity.User;
-import journalApp.repository.UserRepository;
+import journalApp.entity.UserAccount;
+import journalApp.repository.AccountRepository;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
@@ -13,19 +13,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-public class UserServiceTests {
+public class AccountServiceTests {
 
     @Autowired
-    private UserRepository userRepository;
+    private AccountRepository userRepository;
 
     @Autowired
-    private UserService userService;
-
+    private AccountService userService;
 
     @Disabled
     @ParameterizedTest
-    @ArgumentsSource(UserArgumentsProvider.class)
-    public void testSaveNewUser(User user) {
+    @ArgumentsSource(AccountArgumentsProvider.class)
+    public void testSaveNewUser(UserAccount user) {
         assertTrue(userService.saveNewUser(user));
     }
 
