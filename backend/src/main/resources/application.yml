@@ -1,0 +1,78 @@
+weather:
+  api:
+    key: ${WEATHER_API_KEY:}
+
+jwt:
+  secret: ${JWT_SECRET:TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash}
+
+server:
+  port: 8080
+  servlet:
+    context-path: /journal
+
+spring:
+  profiles:
+    active: local
+  main:
+    allow-circular-references: true
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:}
+      port: ${REDIS_PORT:13809}
+      password: ${REDIS_PASSWORD:}
+
+    # MongoDB Configuration
+    mongodb:
+      uri: ${MONGODB_URI:}
+      database: ${MONGODB_DATABASE:journalDb}
+      auto-index-creation: true
+
+  # Email Configuration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Kafka Configuration
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: weekly-sentiment-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: journalApp.model
+    properties:
+      security:
+        protocol: SASL_SSL
+      sasl:
+        mechanism: PLAIN
+        jaas:
+          config: ${KAFKA_JAAS_CONFIG:}
+      session:
+        timeout:
+          ms: 45000

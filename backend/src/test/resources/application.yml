@@ -1,0 +1,69 @@
+# Spring Test Profile Configuration
+# This file automatically overrides application.yml during test execution.
+
+weather:
+  api:
+    key: mock-weather-key
+
+jwt:
+  secret: TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V
+
+cors:
+  allowed-origins: http://localhost:5173,http://localhost:3000
+
+api:
+  claude:
+    key: mock-claude-key
+    model: claude-haiku-4-5
+
+spring:
+  main:
+    allow-circular-references: true
+  
+  # Redis Configuration (Test values)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+    # MongoDB Configuration (Test values)
+    mongodb:
+      uri: mongodb://localhost:27017/journalDb-test
+      database: journalDb-test
+      auto-index-creation: true
+
+  # Email Configuration (Test values)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: test@example.com
+    password: test-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Kafka Configuration (Test values)
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: weekly-sentiment-group-test
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: journalApp.model
+    properties:
+      security:
+        protocol: PLAINTEXT
+      session:
+        timeout:
+          ms: 45000
