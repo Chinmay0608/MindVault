@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as journalApi from '../api/journalApi';
-import GlassCard from '../components/GlassCard';
 import SentimentBadge from '../components/SentimentBadge';
-import EntryForm from '../components/EntryForm';
-import { Calendar, ArrowLeft, Edit3, Trash2, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
+import { Calendar, ArrowLeft, Edit3, Trash2, ShieldCheck, AlertCircle, Sparkles, Loader2, Save } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function JournalEntryPage() {
   const { id } = useParams();
@@ -15,12 +14,26 @@ export default function JournalEntryPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editTags, setEditTags] = useState([]);
+  const [newTag, setNewTag] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+
+  // AI Sentiment analysis state
   const [aiSentiment, setAiSentiment] = useState(null);
+  const [aiInsight, setAiInsight] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchEntry();
   }, [id]);
+
+  useEffect(() => {
+    const words = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
+    setWordCount(words);
+  }, [editContent]);
 
   const fetchEntry = async () => {
     setLoading(true);
@@ -28,8 +41,13 @@ export default function JournalEntryPage() {
     try {
       const data = await journalApi.getById(id);
       setEntry(data);
+      setEditTitle(data.title || '');
+      setEditContent(data.content || '');
+      setEditTags(data.tags || []);
+      
       if (data.sentimentScore) {
         setAiSentiment(data.sentimentScore);
+        setAiInsight(data.aiInsight);
       } else {
         // Trigger synchronous analysis if not yet available
         fetchAiSentiment(data.id);
@@ -46,6 +64,7 @@ export default function JournalEntryPage() {
     try {
       const response = await journalApi.getSentiment(entryId);
       setAiSentiment(response.sentiment);
+      setAiInsight(response.aiInsight || 'Your thoughts reflect a state of reflection and emotional awareness.');
     } catch (err) {
       // Graceful fallback
     } finally {
@@ -53,21 +72,35 @@ export default function JournalEntryPage() {
     }
   };
 
-  const handleUpdate = async (formData) => {
-    setError('');
-    const typeLabel = formData.entryType === 'TODO' ? 'task' : formData.entryType === 'EXPENSE' ? 'expense' : 'journal entry';
+  const handleUpdate = async () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      showToast('Please enter both title and content.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setAiLoading(true);
     try {
-      const updated = await journalApi.update(id, formData);
+      const updated = await journalApi.update(id, {
+        title: editTitle,
+        content: editContent,
+        tags: editTags
+      });
       setEntry(updated);
-      showToast(`${typeLabel} updated successfully!`, 'success');
+      showToast('Entry updated successfully!', 'success');
       setIsEditing(false);
+      
       if (updated.sentimentScore) {
         setAiSentiment(updated.sentimentScore);
+        setAiInsight(updated.aiInsight);
       } else {
         fetchAiSentiment(updated.id);
       }
     } catch (err) {
-      setError(`Failed to save ${typeLabel}.`);
+      showToast('Failed to save entry changes.', 'error');
+    } finally {
+      setLoading(false);
+      setAiLoading(false);
     }
   };
 
@@ -82,140 +115,244 @@ export default function JournalEntryPage() {
     }
   };
 
+  const handleAddTag = () => {
+    if (newTag.trim() && !editTags.includes(newTag.trim().toLowerCase())) {
+      setEditTags([...editTags, newTag.trim().toLowerCase()]);
+      setNewTag('');
+      setShowTagInput(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   };
 
+  const pageVariants = {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
+    exit: { opacity: 0, y: -8, transition: { duration: 0.2 } }
+  };
+
   return (
-    <div className="min-h-screen pb-24 text-[#f1f0ff] relative">
-      <main className="max-w-4xl mx-auto flex flex-col gap-6">
-        {/* Back navigation */}
-        <div>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 text-xs font-bold text-[#9ca3af] hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2 border border-white/10 hover:border-white/20 rounded-2xl cursor-pointer transition-all duration-300"
-          >
-            <ArrowLeft size={14} />
-            <span>Back to Workspace</span>
-          </button>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="max-w-3xl mx-auto space-y-6 pb-20"
+    >
+      {/* Editor/Viewer Top Bar */}
+      <div className="flex items-center justify-between border-b border-white/[0.04] pb-4">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={14} />
+          <span>All Entries</span>
+        </button>
+
+        <div className="flex items-center gap-3">
+          {isEditing ? (
+            <>
+              <span className="text-xs text-slate-500 font-medium">{wordCount} words</span>
+              <button
+                onClick={handleUpdate}
+                disabled={loading}
+                className="btn-primary"
+              >
+                {loading && <Loader2 size={14} className="animate-spin" />}
+                <Save size={14} />
+                <span>Save</span>
+              </button>
+              <button
+                onClick={() => { setIsEditing(false); fetchEntry(); }}
+                className="btn-ghost"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="btn-ghost"
+              >
+                <Edit3 size={14} />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-[#f43f5e] rounded-xl transition-all cursor-pointer"
+              >
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
         </div>
+      </div>
 
-        {error && (
-          <div className="flex items-center gap-2 p-4 text-xs text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/20 rounded-2xl">
-            <AlertCircle size={16} />
-            <span className="font-bold">{error}</span>
-          </div>
-        )}
+      {error && (
+        <div className="flex items-center gap-2 p-4 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+          <AlertCircle size={14} />
+          <span className="font-bold">{error}</span>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-[#7c6aff] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : entry ? (
-          <GlassCard className="p-8 md:p-10 border-white/10">
+      {loading && !entry ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-[#6366f1] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : entry ? (
+        <div className="space-y-6">
+          {/* Card Body */}
+          <div className="card p-8 md:p-10 space-y-6">
+            <div className="text-xs font-bold text-[#818cf8] tracking-wide uppercase">
+              {formatDate(entry.date)}
+            </div>
+
             {isEditing ? (
-              <EntryForm
-                initialTitle={entry.title}
-                initialContent={entry.content}
-                initialSentiment={entry.sentiment}
-                initialType={entry.entryType || 'JOURNAL'}
-                initialMetadata={entry.metadata}
-                isEditMode={true}
-                onCancel={() => setIsEditing(false)}
-                onSave={handleUpdate}
-              />
-            ) : (
-              <article className="flex flex-col gap-6">
-                {/* Header Actions */}
-                <div className="flex flex-wrap justify-between items-start gap-4 pb-6 border-b border-white/5">
-                  <div className="flex flex-col gap-1.5">
-                    <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight leading-tight">
-                      {entry.title || 'Untitled Entry'}
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-[#6b7280]">
-                      <span className="flex items-center gap-1">
-                        <Calendar size={13} />
-                        {formatDate(entry.date)}
-                      </span>
-                      {aiSentiment && (
-                        <span className="flex items-center gap-1 bg-[#7c6aff]/10 border border-[#7c6aff]/20 px-2 py-0.5 rounded-md text-[10px] text-[#a78bfa] font-extrabold uppercase tracking-widest">
-                          Mood: {aiSentiment}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              <>
+                <input
+                  type="text"
+                  placeholder="Title your entry..."
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full bg-transparent border-none text-2xl font-bold text-white placeholder-slate-600 focus:outline-none focus:ring-0"
+                />
 
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 rounded-2xl text-xs font-extrabold text-white transition-all cursor-pointer shadow-sm"
+                <textarea
+                  placeholder="What's on your mind today?"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={10}
+                  className="w-full bg-transparent border-none text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-0 leading-relaxed resize-none"
+                />
+
+                {/* Edit Tags */}
+                <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/[0.04]">
+                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-2">Tags:</span>
+                  {editTags.map((tag) => (
+                    <span
+                      key={tag}
+                      onClick={() => setEditTags(editTags.filter((t) => t !== tag))}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.05] text-[#818cf8] font-medium cursor-pointer hover:border-rose-500/30 hover:text-rose-400 transition-all"
                     >
-                      <Edit3 size={14} />
-                      <span>Edit</span>
-                    </button>
+                      #{tag}
+                    </span>
+                  ))}
+
+                  {showTagInput ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="tag name"
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); }}
+                        className="px-2 py-0.5 text-xs bg-[#1e1e28] border border-white/10 rounded-md text-white outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddTag}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={handleDelete}
-                      className="flex items-center justify-center p-2.5 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-[#f87171] rounded-2xl transition-all cursor-pointer shadow-sm"
+                      onClick={() => setShowTagInput(true)}
+                      className="text-xs text-slate-500 hover:text-white transition-colors font-medium"
                     >
-                      <Trash2 size={15} />
+                      + Add tag
                     </button>
-                  </div>
+                  )}
                 </div>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold text-white tracking-tight leading-tight">
+                  {entry.title || 'Untitled Entry'}
+                </h1>
 
                 {/* Secure Badge */}
-                <div className="flex items-center gap-2 p-3.5 bg-white/5 border border-white/5 rounded-2xl backdrop-blur-sm">
-                  <ShieldCheck size={16} className="text-[#a78bfa] animate-pulse" />
-                  <span className="text-[11px] font-extrabold text-[#a78bfa] uppercase tracking-wider">Encrypted in Local Vault</span>
+                <div className="flex items-center gap-2 p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl inline-flex">
+                  <ShieldCheck size={14} className="text-[#818cf8] animate-pulse" />
+                  <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Encrypted in Local Vault</span>
                 </div>
 
-                {/* Content text */}
-                <div className="text-sm md:text-base text-[#f1f0ff] leading-relaxed whitespace-pre-wrap pt-2 font-medium">
+                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
                   {entry.content}
+                </p>
+
+                {/* View Tags */}
+                {entry.tags && entry.tags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/[0.04]">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-2">Tags:</span>
+                    {entry.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[#818cf8] font-medium"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* AI Analysis slide-in */}
+          <AnimatePresence>
+            {aiLoading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="card p-6 border-indigo-500/20 bg-indigo-500/5 space-y-3"
+              >
+                <div className="flex items-center gap-2.5 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                  <Loader2 size={14} className="animate-spin text-indigo-400" />
+                  <span>Analyzing your entry...</span>
+                </div>
+              </motion.div>
+            )}
+
+            {aiSentiment && !aiLoading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="card p-6 space-y-4 border-emerald-500/20 bg-[#16161d] relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-3 text-[10px] text-slate-500 font-medium">
+                  {formatDate(entry.sentimentAnalyzedAt || entry.date)}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <Sparkles size={14} />
+                  <span>AI Mood Analysis</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <SentimentBadge sentiment={aiSentiment} />
                 </div>
 
-                {/* Metadata sections based on type */}
-                {entry.entryType === 'TODO' && entry.metadata && (
-                  <div className="mt-4 p-5 bg-[#0a0a0f] border border-white/5 rounded-2xl flex flex-col gap-3">
-                    <span className="text-[10px] font-extrabold text-[#7c6aff] uppercase tracking-widest">Task Details</span>
-                    <div className="grid grid-cols-2 gap-4 text-xs font-bold">
-                      <div>Priority: <span className="text-white">{entry.metadata.priority || 'MEDIUM'}</span></div>
-                      <div>Due: <span className="text-white">{entry.metadata.dueDate ? entry.metadata.dueDate.substring(0, 10) : 'None'}</span></div>
-                      <div>Completed: <span className={entry.metadata.completed ? 'text-emerald-400' : 'text-amber-400'}>{entry.metadata.completed ? 'Yes' : 'No'}</span></div>
-                      <div>Estimated Time: <span className="text-white">{entry.metadata.estimatedTime || '30m'}</span></div>
-                    </div>
-                  </div>
-                )}
-
-                {entry.entryType === 'EXPENSE' && entry.metadata && (
-                  <div className="mt-4 p-5 bg-[#0a0a0f] border border-white/5 rounded-2xl flex flex-col gap-3">
-                    <span className="text-[10px] font-extrabold text-[#7c6aff] uppercase tracking-widest">Expense Details</span>
-                    <div className="grid grid-cols-2 gap-4 text-xs font-bold">
-                      <div>Amount: <span className="text-white">₹{entry.metadata.amount}</span></div>
-                      <div>Category: <span className="text-white">{entry.metadata.category || 'General'}</span></div>
-                      <div>Payment Method: <span className="text-white">{entry.metadata.paymentMethod || 'UPI'}</span></div>
-                      <div>Tags: <span className="text-white">{entry.metadata.tags || 'None'}</span></div>
-                    </div>
-                  </div>
-                )}
-
-                {aiSentiment && (
-                  <div className="mt-4 p-5 bg-[#7c6aff]/5 border border-[#7c6aff]/10 rounded-2xl flex flex-col gap-2">
-                    <span className="text-[10px] font-extrabold text-[#a78bfa] uppercase tracking-widest flex items-center gap-1.5">
-                      <Sparkles size={12} />
-                      AI Sentiment Analysis
-                    </span>
-                    <div className="text-xs text-[#9ca3af] font-semibold leading-relaxed">
-                      What you are thinking: <span className="text-white italic">"{entry.aiInsight || 'Your thoughts are being processed.'}"</span>
-                    </div>
-                  </div>
-                )}
-              </article>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {aiInsight || 'Your thoughts reflect a state of reflection and emotional awareness.'}
+                </p>
+                
+                <div className="text-[10px] text-slate-500 pt-2 border-t border-white/[0.04]">
+                  Powered by Gemini Flash 2.0
+                </div>
+              </motion.div>
             )}
-          </GlassCard>
-        ) : null}
-      </main>
-    </div>
+          </AnimatePresence>
+        </div>
+      ) : null}
+    </motion.div>
   );
 }

@@ -14,6 +14,8 @@ import ProfilePage from './pages/ProfilePage';
 import PrivacyShieldPage from './pages/PrivacyShieldPage';
 import ZeroKnowledgePage from './pages/ZeroKnowledgePage';
 import DataAuditPage from './pages/DataAuditPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import SettingsPage from './pages/SettingsPage';
 import Layout from './components/Layout';
 
 function AppContent() {
@@ -74,6 +76,22 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
                 </ProtectedRoute>
               }
             />

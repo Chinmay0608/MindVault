@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useJournalEntries from '../hooks/useJournalEntries';
+import { useAuth } from '../context/AuthContext';
 import EntryCard from '../components/EntryCard';
-import { Plus, Search, BookOpen, AlertCircle, RefreshCw, Calendar, Heart, Shield } from 'lucide-react';
+import { Plus, Search, BookOpen, AlertCircle, RefreshCw, Calendar, Flame, Tag, HelpCircle, AlertTriangle, Smile } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function JournalListPage() {
   const { entries, loading, error, refetch } = useJournalEntries();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
   const navigate = useNavigate();
@@ -21,14 +23,14 @@ export default function JournalListPage() {
           (e) =>
               e.title?.toLowerCase().includes(q) ||
               e.content?.toLowerCase().includes(q) ||
-              e.sentiment?.toLowerCase().includes(q) ||
+              e.tags?.some(t => t.toLowerCase().includes(q)) ||
               e.sentimentScore?.toLowerCase().includes(q)
         )
       );
     }
   }, [searchQuery, entries]);
 
-  // Statistics calculations
+  // Stats calculations
   const totalEntries = entries.length;
 
   const entriesThisWeek = entries.filter(e => {
@@ -39,146 +41,192 @@ export default function JournalListPage() {
     return diffDays <= 7;
   }).length;
 
+  const currentStreak = user?.currentStreak || 0;
+
+  // Mood calculations for Distribution Bar
   const moodCounts = entries.reduce((acc, curr) => {
     const score = (curr.sentimentScore || 'NEUTRAL').toUpperCase();
-    if (acc[score] !== undefined) {
-      acc[score]++;
+    if (score.includes('POSITIVE') || score.includes('HAPPY')) {
+      acc.POSITIVE++;
+    } else if (score.includes('NEGATIVE') || score.includes('SAD') || score.includes('ANGRY')) {
+      acc.NEGATIVE++;
+    } else {
+      acc.NEUTRAL++;
     }
     return acc;
   }, { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 });
 
-  return (
-    <div className="min-h-screen pb-24 text-[#f1f0ff] relative">
-      {/* Search and Write Row */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 mt-2">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-2">
-            Journal Vault
-          </h1>
-          <p className="text-sm text-[#9ca3af] font-semibold mt-1">
-            Reflect securely, analyze metrics, and stay mindful.
-          </p>
-        </div>
+  const totalMoods = moodCounts.POSITIVE + moodCounts.NEGATIVE + moodCounts.NEUTRAL || 1;
+  const pctPositive = Math.round((moodCounts.POSITIVE / totalMoods) * 100);
+  const pctNegative = Math.round((moodCounts.NEGATIVE / totalMoods) * 100);
+  const pctNeutral = Math.round((moodCounts.NEUTRAL / totalMoods) * 100);
 
-        <div className="relative flex items-center w-full md:w-80">
-          <Search className="absolute left-4 text-[#6b7280] pointer-events-none" size={16} />
+  const containerVariants = {
+    animate: { transition: { staggerChildren: 0.06 } }
+  };
+
+  const pageVariants = {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
+    exit: { opacity: 0, y: -8, transition: { duration: 0.2 } }
+  };
+
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="space-y-8 pb-20"
+    >
+      {/* Top Search & Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+        <div className="relative flex-1 max-w-lg">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
           <input
             type="text"
-            placeholder="Search entries..."
+            placeholder="Search your entries..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-[#6b7280] text-sm transition-all duration-300 focus:bg-white/10 focus:border-[#7c6aff] outline-none"
+            className="input pl-11"
           />
         </div>
+
+        <button
+          onClick={() => navigate('/new-entry')}
+          className="btn-primary md:hidden"
+        >
+          <Plus size={16} />
+          <span>New Entry</span>
+        </button>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {/* Card 1 */}
-        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-md flex items-center gap-5 shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
-          <div className="w-12 h-12 rounded-2xl bg-[#7c6aff]/10 border border-[#7c6aff]/20 flex items-center justify-center text-[#a78bfa]">
-            <BookOpen size={22} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="card p-6 flex items-center gap-5">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <BookOpen size={20} />
           </div>
           <div>
-            <div className="text-xs text-[#6b7280] font-extrabold uppercase tracking-widest">Total Logs</div>
-            <div className="text-2xl font-black text-white mt-0.5">{totalEntries}</div>
+            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Entries</div>
+            <div className="text-2xl font-bold text-white mt-0.5">{totalEntries}</div>
+            <div className="text-[10px] text-slate-500 mt-1">All thoughts recorded</div>
           </div>
         </div>
 
-        {/* Card 2 */}
-        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-md flex items-center gap-5 shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
-          <div className="w-12 h-12 rounded-2xl bg-[#a78bfa]/10 border border-[#a78bfa]/20 flex items-center justify-center text-[#a78bfa]">
-            <Calendar size={22} />
+        <div className="card p-6 flex items-center gap-5">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <Calendar size={20} />
           </div>
           <div>
-            <div className="text-xs text-[#6b7280] font-extrabold uppercase tracking-widest">Logged This Week</div>
-            <div className="text-2xl font-black text-white mt-0.5">{entriesThisWeek}</div>
+            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">This Week</div>
+            <div className="text-2xl font-bold text-white mt-0.5">{entriesThisWeek}</div>
+            <div className="text-[10px] text-slate-500 mt-1">Logged last 7 days</div>
           </div>
         </div>
 
-        {/* Card 3 */}
-        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-md flex items-center gap-5 shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Heart size={22} />
+        <div className="card p-6 flex items-center gap-5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <Flame size={20} className="animate-pulse" />
           </div>
-          <div className="flex-1">
-            <div className="text-xs text-[#6b7280] font-extrabold uppercase tracking-widest">Mood Summary</div>
-            <div className="flex items-center gap-3.5 mt-1 text-[11px] font-bold">
-              <span className="text-emerald-400">{moodCounts.POSITIVE} Pos</span>
-              <span className="text-rose-400">{moodCounts.NEGATIVE} Neg</span>
-              <span className="text-violet-400">{moodCounts.NEUTRAL} Neu</span>
-            </div>
+          <div>
+            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Streak</div>
+            <div className="text-2xl font-bold text-amber-400 mt-0.5">🔥 {currentStreak} days</div>
+            <div className="text-[10px] text-slate-500 mt-1">Personal best: {user?.longestStreak || currentStreak}</div>
           </div>
         </div>
       </div>
 
-      {/* Error Notification */}
+      {/* Mood Distribution bar */}
+      <div className="card p-6 space-y-3">
+        <div className="flex justify-between items-center text-xs">
+          <span className="font-bold text-slate-400">Mood Distribution</span>
+          <span className="text-slate-500">Last 30 days</span>
+        </div>
+
+        <div className="h-3 w-full bg-white/[0.02] rounded-full overflow-hidden flex">
+          {pctPositive > 0 && (
+            <div 
+              style={{ width: `${pctPositive}%` }} 
+              className="bg-[#10b981] h-full"
+              title={`Positive: ${pctPositive}%`}
+            />
+          )}
+          {pctNeutral > 0 && (
+            <div 
+              style={{ width: `${pctNeutral}%` }} 
+              className="bg-[#f59e0b] h-full"
+              title={`Neutral: ${pctNeutral}%`}
+            />
+          )}
+          {pctNegative > 0 && (
+            <div 
+              style={{ width: `${pctNegative}%` }} 
+              className="bg-[#f43f5e] h-full"
+              title={`Negative: ${pctNegative}%`}
+            />
+          )}
+        </div>
+
+        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider pt-1">
+          <span className="text-[#10b981]">{pctPositive}% Positive</span>
+          <span className="text-[#f59e0b]">{pctNeutral}% Neutral</span>
+          <span className="text-[#f43f5e]">{pctNegative}% Negative</span>
+        </div>
+      </div>
+
+      {/* Error State */}
       {error && (
-        <div className="flex items-center justify-between p-4 mb-6 text-xs text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/20 rounded-2xl">
+        <div className="flex items-center justify-between p-4 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
           <div className="flex items-center gap-2">
-            <AlertCircle size={16} />
+            <AlertCircle size={14} />
             <span className="font-bold">{error}</span>
           </div>
           <button 
             onClick={refetch}
-            className="p-1 rounded-lg hover:bg-white/5 text-[#9ca3af] hover:text-white transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={12} />
           </button>
         </div>
       )}
 
-      {/* Loading & Grid List */}
+      {/* Grid / List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-[#7c6aff] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-2 border-[#6366f1] border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center py-20 px-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-md">
-          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#a78bfa] mb-4">
+        <div className="card flex flex-col items-center justify-center text-center py-20 px-6">
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-[#818cf8] mb-4">
             <BookOpen size={28} />
           </div>
-          <h3 className="text-lg font-black text-white">No entries found</h3>
-          <p className="text-xs text-[#6b7280] max-w-sm mt-2 font-bold leading-relaxed">
-            {searchQuery ? "We couldn't find any entries matching your query." : "Your secure vault is empty. Click the button below to write your first entry!"}
+          <h3 className="text-lg font-bold text-white">Your journal is empty</h3>
+          <p className="text-xs text-slate-500 max-w-sm mt-2 leading-relaxed">
+            {searchQuery ? "No matching entries found." : "Start writing — your first AI analysis is waiting."}
           </p>
           {!searchQuery && (
             <button
               onClick={() => navigate('/new-entry')}
-              className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7c6aff] to-[#a78bfa] hover:from-[#6d5be6] hover:to-[#967ce6] text-white font-extrabold rounded-2xl text-xs transition-all shadow-[0_4px_20px_rgba(124,106,255,0.25)] hover:shadow-[0_4px_25px_rgba(124,106,255,0.35)] cursor-pointer"
+              className="btn-primary mt-6"
             >
-              Log First Entry
+              Write your first entry
             </button>
           )}
         </div>
       ) : (
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          initial="hidden"
-          animate="show"
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.05
-              }
-            }
-          }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
         >
           {filtered.map((entry) => (
-            <motion.div
+            <EntryCard
               key={entry.id}
-              variants={{
-                hidden: { opacity: 0, y: 15 },
-                show: { opacity: 1, y: 0 }
-              }}
-            >
-              <EntryCard
-                entry={entry}
-                onClick={() => navigate(`/journal/id/${entry.id}`)}
-              />
-            </motion.div>
+              entry={entry}
+              onClick={() => navigate(`/journal/id/${entry.id}`)}
+            />
           ))}
         </motion.div>
       )}
@@ -188,10 +236,10 @@ export default function JournalListPage() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => navigate('/new-entry')}
-        className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-tr from-[#7c6aff] to-[#a78bfa] rounded-2xl flex items-center justify-center text-white shadow-[0_4px_25px_rgba(124,106,255,0.45)] cursor-pointer z-40 border border-[#7c6aff]/20"
+        className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-tr from-[#6366f1] to-[#a78bfa] rounded-2xl flex items-center justify-center text-white shadow-[0_4px_25px_rgba(99,102,241,0.4)] cursor-pointer z-40 border border-white/10"
       >
         <Plus size={24} />
       </motion.button>
-    </div>
+    </motion.div>
   );
 }
