@@ -1,92 +1,95 @@
-# JournalAI — Secure Mindfulness Vault & Sentiment Intelligence
+# MindVault — AI-Powered Journal Management System
 
-JournalAI is a modern, recruiter-ready, and portfolio-worthy personal journal application built using **Java Spring Boot**, **MongoDB**, **Apache Kafka**, and a **Vite-React** frontend styled with a premium **Liquid Glassmorphism** design system.
+![Java](https://img.shields.io/badge/Java_17-ED8B00?style=flat&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot_3-6DB33F?style=flat&logo=spring-boot&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat&logo=mongodb&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini_Flash_API-8B5CF6?style=flat&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?style=flat&logo=apache-kafka&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
+![CI](https://github.com/Chinmay0608/journalApp/actions/workflows/ci.yml/badge.svg)
 
-The application allows users to securely record daily thoughts, tasks, and expenses in independent modules, while analyzing the sentiment of their entries using the **Gemini API** with a custom **Local Lexicon Fallback** system (supporting both asynchronous Kafka event messaging and local synchronous processing).
+MindVault is a secure, AI-powered journal management backend built with Java 17 and Spring Boot 3.
+Users can create private journal entries that are asynchronously analyzed by Google Gemini Flash API
+to generate mood sentiment scores (POSITIVE / NEGATIVE / NEUTRAL), delivered via an Apache Kafka pipeline.
 
----
+## Features
 
-## 🚀 Key Features
+- JWT-based authentication with role-based access control (USER / ADMIN)
+- Full CRUD for personal journal records
+- Asynchronous AI sentiment analysis via Google Gemini Flash 2.0 API
+- Apache Kafka event pipeline for non-blocking mood processing
+- Local lexicon fallback when Gemini API is unavailable
+- Redis caching for session and frequently accessed data
+- Weekly mood trend analytics endpoint
+- Journal entry search and tag filtering
+- Streak tracking — consecutive days journaled
+- CORS configuration, input validation, global exception handling
+- CI/CD via GitHub Actions
 
-- **Dynamic Multi-Mode Entry System**: Log journals, manage to-do checklists, or track expenses from independent, customized glassmorphic sub-forms.
-- **Hybrid Sentiment Intelligence**: Supports asynchronous event streaming via Apache Kafka, or falls back to direct synchronous analysis if Kafka is disabled locally (`spring.kafka.enabled=false`). The processor calls the **Gemini API** and falls back to a **Local Lexicon Service** if the API is offline.
-- **Premium Liquid Glass UI**: Sleek dark mode styling featuring teal and cyan glows, custom focus states, light/dark mode transitions, and page-load animations.
-- **Robust Security & Validation**: Strict CORS mappings, local standalone transaction fallbacks, unified request validation, and clean `@RestControllerAdvice` error responses.
+## Tech Stack
 
----
+| Layer | Technology |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot 3, Spring Security |
+| Database | MongoDB |
+| Cache | Redis |
+| Message Queue | Apache Kafka |
+| AI | Google Gemini Flash 2.0 API |
+| Auth | JWT, BCrypt |
+| DevOps | GitHub Actions CI/CD |
 
-## 🛠️ Technical Stack
+## API Endpoints
 
-- **Backend**: Java 17, Spring Boot 3.5.x, Spring Security (Stateless JWT), Spring Kafka, Spring Data MongoDB.
-- **Frontend**: React 19, Vite, Tailwind CSS v4, Framer Motion, Lucide React icons.
-- **Data & Pipelines**: MongoDB (Local/Cloud), Apache Kafka Event Streams.
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | /api/auth/signup | Public | Register new account |
+| POST | /api/auth/login | Public | Login, returns JWT token |
+| GET | /api/entries | USER | Get all journal records |
+| POST | /api/entries | USER | Create journal entry |
+| GET | /api/entries/{id} | USER | Get single entry |
+| PUT | /api/entries/{id} | USER | Update entry |
+| DELETE | /api/entries/{id} | USER | Delete entry |
+| GET | /api/entries/{id}/mood | USER | Get AI sentiment for entry |
+| GET | /api/entries/search?q= | USER | Search entries by keyword |
+| GET | /api/analytics/mood-trend | USER | Weekly mood summary |
+| GET | /api/analytics/streak | USER | Journaling streak count |
+| GET | /api/admin/accounts | ADMIN | Get all user accounts |
 
----
+## Getting Started
 
-## 📂 Project Architecture
+### Prerequisites
+- Java 17+
+- MongoDB (local or Atlas)
+- Redis (optional)
+- Apache Kafka (optional — sentiment falls back to lexicon)
+- Google Gemini API key (free tier at aistudio.google.com)
 
-```mermaid
-graph TD
-    React[React Glassmorphism UI] -->|"REST API + JWT"| Controller[Spring Boot Controllers]
-    Controller -->|"MongoDB CRUD"| Mongo[(MongoDB)]
-    
-    %% Async Event Path
-    Controller -->|"Publish Event (If Kafka Enabled)"| Kafka[Kafka: journal-sentiment-analysis]
-    Kafka -->|"Consume Event"| Consumer[Sentiment Consumer]
-    Consumer -->|"HTTP Request"| Gemini[Gemini API]
-    Consumer -->|"Fallback"| Lexicon[Local Lexicon Service]
-    Consumer -->|"Update Sentiment"| Mongo
-
-    %% Sync Fallback Path
-    Controller -->|"Direct Process (If Kafka Disabled)"| GeminiSync[Gemini API]
-    Controller -->|"Fallback"| LexiconSync[Local Lexicon Service]
-    GeminiSync -->|"Update Sentiment"| Mongo
-    LexiconSync -->|"Update Sentiment"| Mongo
-```
-
----
-
-## 🔧 Installation & Setup
-
-### 1. Prerequisites
-- **Java JDK 17** or higher
-- **Node.js** v18+ & npm
-- **MongoDB** running on `localhost:27017`
-- **Apache Kafka** running on `localhost:9092`
-
-### 2. Environment Setup
-Create a `.env` file in the root directory (based on `.env.example`):
+### Setup
 ```bash
-MONGODB_URI=mongodb://localhost:27017/journalDb
-JWT_SECRET=your_jwt_secret_key_min_32_chars
-CLAUDE_API_KEY=your_anthropic_api_key
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+git clone https://github.com/Chinmay0608/journalApp.git
+cd journalApp
+cp .env.example .env
+# Fill in your values in .env
+mvn spring-boot:run
 ```
 
-### 3. Run Backend
-```bash
-cd backend
-mvn clean spring-boot:run
+## Architecture
+
+```
+Client → Spring Boot REST API → MongoDB
+              ↓
+        Kafka Producer
+              ↓
+        Kafka Consumer
+              ↓
+    Gemini Flash 2.0 API → Mood Score → MongoDB
+    (fallback: Local Lexicon)
+              ↓
+        Redis Cache
 ```
 
-### 4. Run Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Author
 
----
-
-## 🛰️ Key APIs
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/public/signup` | Register new user account | No |
-| `POST` | `/public/login` | Login and receive JWT access token | No |
-| `GET` | `/journal` | Fetch paged entries for logged-in user | Yes |
-| `POST` | `/journal` | Create a new journal entry (triggers Kafka) | Yes |
-| `PUT` | `/journal/id/{id}` | Update an existing journal entry | Yes |
-| `DELETE`| `/journal/id/{id}` | Permanently delete entry | Yes |
-| `GET` | `/journal/id/{id}/sentiment` | Fetch or trigger sentiment analysis | Yes |
-| `GET` | `/admin/all-users` | Fetch all user metadata (Admin role only) | Yes (Admin) |
+**Chinmay Maheshwari**
+[LinkedIn](https://linkedin.com/in/chinmay8064) | [GitHub](https://github.com/Chinmay0608)
