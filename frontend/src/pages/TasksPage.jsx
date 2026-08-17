@@ -21,8 +21,8 @@ import {
   Trash2,
   Folder,
   MoreHorizontal,
-  ArrowUpDown,
-  Edit3
+  Edit3,
+  FolderPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,13 +31,21 @@ export default function TasksPage() {
   const { entries, loading, refetch } = useJournalEntries({ page: 0, size: 100 });
   const { showToast } = useToast();
 
-  // Project & Section States
-  const [projectName, setProjectName] = useState('TCS Placement Prep (19 July)');
+  // Dynamic Project Name with localStorage persistence
+  const [projectName, setProjectName] = useState(() => {
+    return localStorage.getItem('mindvault_project_name') || 'My Tasks & Goals';
+  });
   const [isEditingProject, setIsEditingProject] = useState(false);
-  const [sections, setSections] = useState(['Sorting', 'Arrays', 'Strings', 'General']);
+
+  // Dynamic Custom Sections State with localStorage persistence
+  const [customSections, setCustomSections] = useState(() => {
+    const saved = localStorage.getItem('mindvault_custom_sections');
+    return saved ? JSON.parse(saved) : ['General', 'Priority Items', 'Backlog'];
+  });
+
   const [showNewSectionInput, setShowNewSectionInput] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
-  
+
   // Collapsible completed section toggle
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
 
@@ -51,10 +59,19 @@ export default function TasksPage() {
   const [taskContent, setTaskContent] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   const [status, setStatus] = useState('TODO');
-  const [selectedSection, setSelectedSection] = useState('Sorting');
+  const [selectedSection, setSelectedSection] = useState('General');
   const [dueDate, setDueDate] = useState('');
   const [subtasks, setSubtasks] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  // Persist project name change
+  const handleSaveProjectName = (name) => {
+    const trimmed = name.trim() || 'My Tasks & Goals';
+    setProjectName(trimmed);
+    localStorage.setItem('mindvault_project_name', trimmed);
+    setIsEditingProject(false);
+    showToast(`Project renamed to "${trimmed}"`, 'info');
+  };
 
   // Filter tasks from entries
   const tasks = entries.filter((e) => e.entryType === 'TODO' || (e.title && e.title.startsWith('[Task]')));
@@ -62,6 +79,10 @@ export default function TasksPage() {
   // Active (uncompleted) and Completed tasks
   const activeTasks = tasks.filter((t) => !t.completed && (t.status || 'TODO') !== 'DONE');
   const completedTasks = tasks.filter((t) => t.completed || (t.status || 'TODO') === 'DONE');
+
+  // Dynamically compute all available sections (custom + sections present in tasks)
+  const dbSections = tasks.map((t) => t.section).filter(Boolean);
+  const displaySections = Array.from(new Set([...customSections, ...dbSections]));
 
   const handleCreateTask = async (e) => {
     if (e) e.preventDefault();
@@ -85,7 +106,7 @@ export default function TasksPage() {
         subtasks
       });
 
-      showToast('Task added to project!', 'success');
+      showToast('Task created successfully!', 'success');
       setTaskTitle('');
       setTaskContent('');
       setPriority('MEDIUM');
@@ -107,7 +128,7 @@ export default function TasksPage() {
     try {
       await journalApi.create({
         title: inlineTaskTitle.trim(),
-        content: 'Quick task item',
+        content: 'Task item',
         entryType: 'TODO',
         priority: 'MEDIUM',
         status: 'TODO',
@@ -121,14 +142,17 @@ export default function TasksPage() {
       setActiveAddingSection(null);
       refetch();
     } catch (err) {
-      showToast('Failed to add quick task', 'error');
+      showToast('Failed to add task', 'error');
     }
   };
 
   const handleCreateSection = () => {
-    if (newSectionName.trim() && !sections.includes(newSectionName.trim())) {
-      setSections([...sections, newSectionName.trim()]);
-      showToast(`Created section "${newSectionName.trim()}"`, 'success');
+    const trimmed = newSectionName.trim();
+    if (trimmed && !customSections.includes(trimmed)) {
+      const updated = [...customSections, trimmed];
+      setCustomSections(updated);
+      localStorage.setItem('mindvault_custom_sections', JSON.stringify(updated));
+      showToast(`Created section "${trimmed}"`, 'success');
       setNewSectionName('');
       setShowNewSectionInput(false);
     }
@@ -216,27 +240,28 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-8 pb-20 max-w-6xl mx-auto">
-      {/* Reference Image Header Matching TickTick Top Bar */}
+      {/* Dynamic Project Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--border-subtle)] pb-5">
         <div className="flex items-center gap-3">
-          <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer">
-            <Folder size={20} />
-          </button>
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <Folder size={18} />
+          </div>
           
           {isEditingProject ? (
             <input
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              onBlur={() => setIsEditingProject(false)}
-              onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingProject(false); }}
-              className="text-xl font-bold bg-[var(--bg-elevated)] border border-[var(--border-default)] px-2 py-1 rounded-lg text-[var(--text-primary)] outline-none"
+              onBlur={() => handleSaveProjectName(projectName)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProjectName(projectName); }}
+              className="text-xl font-bold bg-[var(--bg-elevated)] border border-[var(--border-default)] px-3 py-1 rounded-xl text-[var(--text-primary)] outline-none"
               autoFocus
             />
           ) : (
             <h1 
               onClick={() => setIsEditingProject(true)}
-              className="text-xl font-bold text-[var(--text-primary)] tracking-tight cursor-pointer flex items-center gap-2 hover:text-indigo-400 transition-colors"
+              className="text-xl font-bold text-[var(--text-primary)] tracking-tight cursor-pointer flex items-center gap-2 hover:text-[#818cf8] transition-colors"
+              title="Click to rename project"
             >
               <span>{projectName}</span>
               <Edit3 size={14} className="text-[var(--text-muted)] opacity-60 hover:opacity-100" />
@@ -244,7 +269,7 @@ export default function TasksPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
           {/* View Switcher Pills */}
           <div className="flex items-center bg-[var(--bg-surface)] p-1 rounded-2xl border border-[var(--border-default)]">
             <button
@@ -283,6 +308,14 @@ export default function TasksPage() {
           </div>
 
           <button
+            onClick={() => setShowNewSectionInput(true)}
+            className="btn-ghost text-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <FolderPlus size={14} />
+            <span>+ Add Section</span>
+          </button>
+
+          <button
             onClick={() => setShowCreateModal(true)}
             className="btn-primary shrink-0"
           >
@@ -293,36 +326,56 @@ export default function TasksPage() {
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* SECTIONED PROJECT TASK BOARD (Reference UI Implementation) */}
+      {/* SECTIONED BOARD VIEW */}
       {/* ---------------------------------------------------- */}
       {activeTab === 'sections' && (
-        <div className="space-y-10">
-          {sections.map((sectionName) => {
+        <div className="space-y-8">
+          {/* New Section Creator Bar */}
+          {showNewSectionInput && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 p-4 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl"
+            >
+              <input
+                type="text"
+                placeholder="Section name (e.g. Work, Feature Planning, Deep Work)..."
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSection(); }}
+                className="input flex-1 text-xs"
+                autoFocus
+              />
+              <button onClick={handleCreateSection} className="btn-primary">
+                Add Section
+              </button>
+              <button onClick={() => setShowNewSectionInput(false)} className="btn-ghost">
+                Cancel
+              </button>
+            </motion.div>
+          )}
+
+          {displaySections.map((sectionName) => {
             const sectionTasks = getTasksForSection(sectionName);
             return (
               <div key={sectionName} className="space-y-3">
-                {/* Section Header Matching Reference UI: "Sorting 5 + ... + New section" */}
+                {/* Section Header: Clean title + task counter + inline add task button */}
                 <div className="flex items-center justify-between text-xs font-bold text-[var(--text-secondary)] pb-2 border-b border-[var(--border-subtle)]">
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--text-primary)] font-extrabold text-sm">{sectionName}</span>
-                    <span className="text-[11px] text-[var(--text-muted)] font-bold">{sectionTasks.length}</span>
+                    <span className="text-[var(--text-primary)] font-bold text-sm">{sectionName}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] font-extrabold border border-[var(--border-subtle)]">
+                      {sectionTasks.length}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs">
-                    <button
-                      onClick={() => setActiveAddingSection(sectionName)}
-                      className="hover:text-[var(--text-primary)] text-[var(--text-muted)] cursor-pointer flex items-center gap-1"
-                      title="Add task to this section"
-                    >
-                      <Plus size={14} />
-                    </button>
-                    <button
-                      onClick={() => setShowNewSectionInput(true)}
-                      className="text-indigo-400 hover:text-indigo-300 transition-colors font-semibold cursor-pointer"
-                    >
-                      + New section
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setActiveAddingSection(sectionName)}
+                    className="hover:text-[var(--text-primary)] text-[var(--text-muted)] cursor-pointer flex items-center gap-1 font-semibold text-xs transition-colors"
+                    title="Add task to this section"
+                  >
+                    <Plus size={14} />
+                    <span>Add Task</span>
+                  </button>
                 </div>
 
                 {/* Inline Quick Add Task for this Section */}
@@ -352,7 +405,7 @@ export default function TasksPage() {
                   </div>
                 )}
 
-                {/* Task Cards List - Reference Pill Card Design */}
+                {/* Task Items */}
                 <div className="space-y-2">
                   {sectionTasks.map((task) => (
                     <TickTaskPillCard
@@ -364,7 +417,7 @@ export default function TasksPage() {
                   ))}
 
                   {sectionTasks.length === 0 && activeAddingSection !== sectionName && (
-                    <div className="p-3 text-xs text-[var(--text-muted)] italic bg-[var(--bg-surface)]/50 rounded-xl border border-[var(--border-subtle)] text-center">
+                    <div className="py-4 text-xs text-[var(--text-muted)] italic text-center border border-dashed border-[var(--border-subtle)] rounded-2xl">
                       No active tasks in {sectionName}.
                     </div>
                   )}
@@ -373,28 +426,7 @@ export default function TasksPage() {
             );
           })}
 
-          {/* New Section Inline Creator Prompt */}
-          {showNewSectionInput && (
-            <div className="flex items-center gap-3 p-4 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl">
-              <input
-                type="text"
-                placeholder="Section title (e.g. Dynamic Programming, Graphs)..."
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSection(); }}
-                className="input flex-1 text-xs"
-                autoFocus
-              />
-              <button onClick={handleCreateSection} className="btn-primary">
-                Create Section
-              </button>
-              <button onClick={() => setShowNewSectionInput(false)} className="btn-ghost">
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {/* Collapsible Completed Section Matching Reference UI: "v Completed 4" */}
+          {/* Collapsible Completed Section: "v Completed (N)" */}
           <div className="pt-6 border-t border-[var(--border-subtle)] space-y-3">
             <button
               onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
@@ -655,7 +687,7 @@ export default function TasksPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Selection Sort, Merge Sort..."
+                    placeholder="Enter task name..."
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
                     className="input"
@@ -670,7 +702,7 @@ export default function TasksPage() {
                       onChange={(e) => setSelectedSection(e.target.value)}
                       className="input cursor-pointer"
                     >
-                      {sections.map((s) => (
+                      {displaySections.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
@@ -707,7 +739,7 @@ export default function TasksPage() {
   );
 }
 
-// TickTick Pixel-Matched Pill Card Component
+// TickTask Pill Card Component
 function TickTaskPillCard({ task, onToggle, onDelete, completedStyle = false }) {
   const isCompleted = task.completed || (task.status || 'TODO') === 'DONE' || completedStyle;
 
