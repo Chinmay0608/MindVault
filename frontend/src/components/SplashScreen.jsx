@@ -335,7 +335,7 @@ export default function SplashScreen() {
       </div>
 
       <div className="absolute bottom-8 right-8 text-stone-400">
-        <span className="text-xs font-medium tracking-wider uppercase">Secure Encrypted Ledger</span>
+        <span className="text-xs font-medium tracking-wider uppercase">Secure Encrypted Journal</span>
       </div>
 
       {/* Bottom ink wash */}

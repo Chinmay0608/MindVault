@@ -1,22 +1,16 @@
 import { useState } from 'react';
-import { SENTIMENT_CONFIG } from './SentimentBadge';
 import { 
   Save, 
   AlertCircle, 
   FileText, 
   CheckSquare, 
-  IndianRupee, 
   Clock,
   Flag,
   Calendar as CalendarIcon,
   Bell,
   Plus,
   Trash2,
-  ListTodo,
-  Wallet,
-  Paperclip,
-  Tag,
-  X
+  ListTodo
 } from 'lucide-react';
 
 const SENTIMENT_ACTIVE_STYLES = {
@@ -28,8 +22,7 @@ const SENTIMENT_ACTIVE_STYLES = {
 
 const ENTRY_TYPES = [
   { value: 'JOURNAL', label: 'Journal', icon: FileText },
-  { value: 'TODO', label: 'To-Do', icon: CheckSquare },
-  { value: 'EXPENSE', label: 'Expense', icon: IndianRupee }
+  { value: 'TODO', label: 'To-Do', icon: CheckSquare }
 ];
 
 export default function EntryForm({ 
@@ -58,17 +51,10 @@ export default function EntryForm({
   const [reminder, setReminder] = useState(initialMetadata.reminder || false);
   const [newSubtaskText, setNewSubtaskText] = useState('');
 
-  // Expense metadata states
-  const [amount, setAmount] = useState(initialMetadata.amount || '');
-  const [category, setCategory] = useState(initialMetadata.category || '');
-  const [paymentMethod, setPaymentMethod] = useState(initialMetadata.paymentMethod || 'UPI');
-  const [tags, setTags] = useState(initialMetadata.tags || '');
-  const [receiptName, setReceiptName] = useState(initialMetadata.receiptName || '');
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      const modeLabel = entryType === 'TODO' ? 'task title' : entryType === 'EXPENSE' ? 'expense description' : 'title';
+      const modeLabel = entryType === 'TODO' ? 'task title' : 'title';
       setError(`Please enter a ${modeLabel}.`);
       return;
     }
@@ -82,12 +68,6 @@ export default function EntryForm({
       metadata.subtasks = subtasks;
       metadata.estimatedTime = estimatedTime;
       metadata.reminder = reminder;
-    } else if (entryType === 'EXPENSE') {
-      metadata.amount = Number(amount) || 0;
-      metadata.category = category || 'General';
-      metadata.paymentMethod = paymentMethod;
-      metadata.tags = tags;
-      metadata.receiptName = receiptName;
     }
 
     onSave({ title, content, sentiment, entryType, metadata });
@@ -113,16 +93,6 @@ export default function EntryForm({
 
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const progressPercent = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
-
-  // File Upload Simulator
-  const triggerMockUpload = () => {
-    setReceiptName('receipt_invoice_2026.pdf');
-  };
-
-  const removeMockReceipt = (e) => {
-    e.stopPropagation();
-    setReceiptName('');
-  };
 
   // ----------------------------------------------------
   // JOURNAL LAYOUT
@@ -428,166 +398,6 @@ export default function EntryForm({
     );
   };
 
-  // ----------------------------------------------------
-  // EXPENSE LAYOUT
-  // ----------------------------------------------------
-  const renderExpenseForm = () => {
-    return (
-      <div className="flex flex-col gap-6 text-[#f1f0ff]">
-        {/* Dynamic Header */}
-        <div className="border-b border-white/5 pb-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-black text-white tracking-tight">
-              {isEditMode ? 'Edit Expense' : 'Add Expense'}
-            </h2>
-            <p className="text-xs text-[#9ca3af] font-semibold mt-1">Track your spending intelligently.</p>
-          </div>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="text-xs font-bold text-[#9ca3af] hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-xl cursor-pointer transition-colors"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-
-        {/* Description */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-extrabold text-[#7c6aff] uppercase tracking-wider">Expense Description</label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Weekly Groceries, Server Billing..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-5 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-[#6b7280] text-sm transition-all duration-300 focus:bg-white/10 focus:border-[#7c6aff] outline-none"
-          />
-        </div>
-
-        {/* Expense Grid Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 rounded-2xl bg-white/5 border border-white/10">
-          {/* Amount */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-[#9ca3af] uppercase tracking-wider flex items-center gap-1">
-              <IndianRupee size={12} className="text-[#6b7280]" />
-              <span>Amount (₹)</span>
-            </label>
-            <input
-              type="number"
-              required
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-extrabold bg-[#0a0a0f] border border-white/10 rounded-xl focus:border-[#7c6aff] text-white outline-none"
-            />
-          </div>
-
-          {/* Category */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-[#9ca3af] uppercase tracking-wider flex items-center gap-1">
-              <Tag size={12} className="text-[#6b7280]" />
-              <span>Category</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Food, Travel, Rent..."
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-bold bg-[#0a0a0f] border border-white/10 rounded-xl focus:border-[#7c6aff] text-white outline-none"
-            />
-          </div>
-
-          {/* Payment Method */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-[#9ca3af] uppercase tracking-wider flex items-center gap-1">
-              <Wallet size={12} className="text-[#6b7280]" />
-              <span>Payment Method</span>
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-bold bg-[#0a0a0f] border border-white/10 rounded-xl focus:border-[#7c6aff] text-white outline-none cursor-pointer"
-            >
-              <option value="UPI">UPI</option>
-              <option value="CARD">Credit/Debit Card</option>
-              <option value="CASH">Cash</option>
-              <option value="NETBANKING">Net Banking</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Tags & Receipt */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Tags */}
-          <div className="flex flex-col gap-1.5 p-5 rounded-2xl bg-white/5 border border-white/10">
-            <label className="text-[10px] font-extrabold text-[#9ca3af] uppercase tracking-wider flex items-center gap-1">
-              <Tag size={12} className="text-[#6b7280]" />
-              <span>Tags (comma separated)</span>
-            </label>
-            <input
-              type="text"
-              placeholder="personal, vital, office"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-bold bg-[#0a0a0f] border border-white/10 rounded-xl focus:border-[#7c6aff] text-white outline-none"
-            />
-          </div>
-
-          {/* Mock Receipt Upload */}
-          <div 
-            onClick={triggerMockUpload}
-            className="p-5 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 hover:border-[#7c6aff]/80 hover:bg-white/10 transition-all duration-200 cursor-pointer flex flex-col justify-center items-center text-center gap-1 group"
-          >
-            {receiptName ? (
-              <div className="flex items-center gap-2 bg-[#7c6aff]/10 border border-[#7c6aff]/20 text-[#a78bfa] text-xs font-bold px-3 py-1.5 rounded-xl">
-                <Paperclip size={13} />
-                <span>{receiptName}</span>
-                <button 
-                  type="button" 
-                  onClick={removeMockReceipt}
-                  className="hover:text-rose-400 font-extrabold text-[10px]"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ) : (
-              <>
-                <Paperclip size={16} className="text-[#6b7280] group-hover:text-[#a78bfa] transition-colors" />
-                <span className="text-[11px] text-[#9ca3af] font-bold">Attach Bill / Receipt</span>
-                <span className="text-[9px] text-[#6b7280] font-semibold uppercase tracking-wider">No receipt attached.</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Expense Notes */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-extrabold text-[#7c6aff] uppercase tracking-wider">Expense Notes</label>
-          <textarea
-            placeholder="Add notes about this purchase..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={3}
-            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-[#6b7280] text-sm transition-all duration-300 focus:bg-white/10 focus:border-[#7c6aff] outline-none"
-          />
-        </div>
-
-        {/* Save Expense Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#7c6aff] to-[#a78bfa] hover:from-[#6d5be6] hover:to-[#967ce6] text-white font-extrabold rounded-2xl shadow-lg transition-all duration-200 cursor-pointer text-sm"
-        >
-          <Save size={16} />
-          <span>{loading ? 'Saving Expense...' : 'Save Expense'}</span>
-        </button>
-      </div>
-    );
-  };
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && (
@@ -625,7 +435,6 @@ export default function EntryForm({
 
       {/* Render subforms conditionally */}
       {entryType === 'TODO' && renderTodoForm()}
-      {entryType === 'EXPENSE' && renderExpenseForm()}
       {entryType === 'JOURNAL' && renderJournalForm()}
     </form>
   );

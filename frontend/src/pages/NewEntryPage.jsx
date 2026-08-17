@@ -16,6 +16,9 @@ export default function NewEntryPage() {
   const [showTagInput, setShowTagInput] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
+  // Track created entry ID in current editor session to prevent duplicate entry records on re-save
+  const [createdEntryId, setCreatedEntryId] = useState(null);
+
   // Validation & dirty tracking states
   const [showValidation, setShowValidation] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -27,7 +30,7 @@ export default function NewEntryPage() {
   // Track if user has unsaved draft changes
   const isDirty = (title.trim() !== '' || content.trim() !== '' || tags.length > 0) && !savedSuccess;
 
-  // Bug 2 Fix: Handle browser tab close/reload beforeunload event when draft is dirty
+  // Handle browser tab close/reload beforeunload event when draft is dirty
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isDirty) {
@@ -44,7 +47,7 @@ export default function NewEntryPage() {
     setWordCount(words);
   }, [content]);
 
-  // Bug 2 Fix: Safe in-app navigation guard for unsaved changes
+  // Safe in-app navigation guard for unsaved changes
   const handleNavigateAway = (path) => {
     if (isDirty) {
       const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave and discard this draft?');
@@ -68,19 +71,36 @@ export default function NewEntryPage() {
     setSentimentResult(null);
 
     try {
-      const saved = await journalApi.create({
-        title,
-        content,
-        tags
-      });
+      let saved;
+      if (createdEntryId) {
+        // Update existing entry in place instead of creating a duplicate document in MongoDB
+        saved = await journalApi.update(createdEntryId, {
+          title,
+          content,
+          tags
+        });
+      } else {
+        // Create new entry on first save
+        saved = await journalApi.create({
+          title,
+          content,
+          tags
+        });
+        if (saved && saved.id) {
+          setCreatedEntryId(saved.id);
+        }
+      }
 
       setSavedSuccess(true);
-      showToast('Entry successfully saved!', 'success');
+      showToast(createdEntryId ? 'Entry updated successfully!' : 'Entry successfully saved!', 'success');
 
       // Trigger/retrieve AI analysis
       try {
-        const analysis = await journalApi.getSentiment(saved.id);
-        setSentimentResult(analysis);
+        const targetId = saved?.id || createdEntryId;
+        if (targetId) {
+          const analysis = await journalApi.getSentiment(targetId);
+          setSentimentResult(analysis);
+        }
       } catch (err) {
         // Safe fallback score
         setSentimentResult({
@@ -129,7 +149,6 @@ export default function NewEntryPage() {
     >
       {/* Editor Top Bar */}
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
-        {/* Bug 2 Fix: Guarded navigation for 'All Entries' link */}
         <button
           type="button"
           onClick={() => handleNavigateAway('/dashboard')}
@@ -141,7 +160,6 @@ export default function NewEntryPage() {
 
         <div className="flex items-center gap-4">
           <span className="text-xs text-[var(--text-muted)] font-medium">{wordCount} words</span>
-          {/* Bug 3 Fix: Save Entry button disabled & guarded against empty submission */}
           <button
             type="button"
             onClick={handleSave}
@@ -149,7 +167,7 @@ export default function NewEntryPage() {
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {(loading || analyzing) && <Loader2 size={14} className="animate-spin" />}
-            <span>Save Entry</span>
+            <span>{createdEntryId ? 'Update Entry' : 'Save Entry'}</span>
           </button>
         </div>
       </div>
@@ -160,13 +178,13 @@ export default function NewEntryPage() {
           {formatDate()}
         </div>
 
-        {/* Bug 1 Fix: Title input uses var(--text-primary) & var(--text-muted) for 100% visibility in light & dark themes */}
+        {/* Title input */}
         <div className="space-y-1">
           <input
             type="text"
             placeholder="Title your entry..."
             value={title}
-            onChange={(e) => { setTitle(e.target.value); setShowValidation(false); }}
+            onChange={(e) => { setTitle(e.target.value); setShowValidation(false); setSavedSuccess(false); }}
             className="w-full bg-transparent border-none text-2xl font-bold text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-0"
           />
           {showValidation && !title.trim() && (
@@ -181,7 +199,7 @@ export default function NewEntryPage() {
           <textarea
             placeholder="What's on your mind today?"
             value={content}
-            onChange={(e) => { setContent(e.target.value); setShowValidation(false); }}
+            onChange={(e) => { setContent(e.target.value); setShowValidation(false); setSavedSuccess(false); }}
             rows={10}
             className="w-full bg-transparent border-none text-sm text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-0 leading-relaxed resize-none"
           />
@@ -198,7 +216,7 @@ export default function NewEntryPage() {
           {tags.map((tag) => (
             <span
               key={tag}
-              onClick={() => setTags(tags.filter((t) => t !== tag))}
+              onClick={() => { setTags(tags.filter((t) => t !== tag)); setSavedSuccess(false); }}
               className="text-xs px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)] font-medium cursor-pointer hover:border-rose-500/30 hover:text-rose-400 transition-all flex items-center gap-1"
             >
               #{tag}
@@ -225,7 +243,6 @@ export default function NewEntryPage() {
               </button>
             </div>
           ) : (
-            /* Bug 5 Fix: Styled + Add tag as a visible interactive pill button */
             <button
               type="button"
               onClick={() => setShowTagInput(true)}

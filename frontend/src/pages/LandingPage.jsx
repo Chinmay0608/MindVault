@@ -202,13 +202,6 @@ const LandingPage = () => {
       description: 'Fluid, interactive to-do lists that adapt to your workflow. Priority scoring, deadline tracking, and habit streaks.'
     },
     {
-      icon: DollarSign,
-      iconColor: 'text-amber-500',
-      iconBg: 'bg-amber-500/10',
-      title: 'Expense Ledger',
-      description: 'Log financial diaries with intelligent categorization. Visual spending insights and budget tracking.'
-    },
-    {
       icon: Lock,
       iconColor: 'text-rose-400',
       iconBg: 'bg-rose-400/10',
@@ -235,12 +228,12 @@ const LandingPage = () => {
     {
       number: '02',
       title: 'Capture Your World',
-      description: 'Start journaling, logging expenses, or building agendas. The interface adapts to your workflow. Rich text, voice notes, mood tags, and photo attachments — all encrypted at rest.'
+      description: 'Start journaling, creating task agendas, or tracking habits. The interface adapts to your workflow. Rich text, voice notes, mood tags, and photo attachments — all encrypted at rest.'
     },
     {
       number: '03',
       title: 'Discover Insights',
-      description: 'Watch patterns emerge. AI surfaces emotional trends, spending habits, and productivity correlations you never knew existed. Your data, your insights, your growth.'
+      description: 'Watch patterns emerge. AI surfaces emotional trends, mood patterns, and productivity correlations you never knew existed. Your data, your insights, your growth.'
     }
   ];
 
@@ -252,7 +245,7 @@ const LandingPage = () => {
       initials: 'SK'
     },
     {
-      text: "The expense tracking combined with mood journaling helped me realize I spend more when I'm stressed. Game-changing insight that saved me ₹40,000 in three months.",
+      text: "The task management combined with mood journaling helped me organize my days and stay focused. Game-changing insight into my habits.",
       author: 'Rahul Patel',
       role: 'Software Engineer, Google',
       initials: 'RP'
@@ -462,26 +455,6 @@ const LandingPage = () => {
               </div>
               <div className="text-sm text-stone-500 leading-relaxed">
                 <p className="italic border-l-2 border-amber-400 pl-4 text-stone-600">"Reflections captured safely. Every thought matters, every memory preserved."</p>
-              </div>
-            </div>
-
-            <div
-              ref={(el) => (cardsRef.current[1] = el)}
-              data-depth="0.05"
-              className="absolute top-[35%] right-[5%] w-[260px] rounded-[24px] p-6 backdrop-blur-xl border border-stone-200/80 shadow-[0_20px_60px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] animate-float2 bg-white/70"
-              style={{ borderLeft: '4px solid #f87171' }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#1c1917]">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-red-100 text-red-500">
-                    <DollarSign className="w-4 h-4" strokeWidth={2.5} />
-                  </div>
-                  Expense Ledger
-                </div>
-              </div>
-              <div className="text-sm text-stone-500 leading-relaxed">
-                <div className="text-2xl font-extrabold text-red-500 my-2">₹8,450.00</div>
-                <div className="text-xs text-stone-400">Category: Travel &amp; Relocation</div>
               </div>
             </div>
 
@@ -801,7 +774,7 @@ const LandingPage = () => {
         </div>
 
         <div className="max-w-[1200px] mx-auto pt-8 border-t border-stone-200/60 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-stone-400">MIND VAULT © 2026 — SECURE ENCRYPTED LEDGER SYSTEM</p>
+          <p className="text-xs text-stone-400">MIND VAULT © 2026 — SECURE ENCRYPTED JOURNAL SYSTEM</p>
           <div className="flex gap-8">
             {['Terms', 'Privacy', 'Guidelines'].map((item) => (
               <a key={item} href="#" className="text-xs text-stone-400 no-underline uppercase tracking-[0.1em] font-semibold transition-colors duration-300 hover:text-[#1c1917]">
