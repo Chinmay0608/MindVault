@@ -421,6 +421,8 @@ public class EntryController {
                     if (newEntry.getCompleted() != null) old.setCompleted(newEntry.getCompleted());
                     if (newEntry.getDueDate() != null) old.setDueDate(newEntry.getDueDate());
                     if (newEntry.getSubtasks() != null) old.setSubtasks(newEntry.getSubtasks());
+                    if (newEntry.getSection() != null) old.setSection(newEntry.getSection());
+                    if (newEntry.getProjectName() != null) old.setProjectName(newEntry.getProjectName());
                     entryService.saveEntry(old);
                     if (kafkaEnabled) {
                         try {

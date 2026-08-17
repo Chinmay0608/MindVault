@@ -34,6 +34,8 @@ public class JournalRecord {
     private Boolean completed = false;
     private java.time.LocalDateTime dueDate;
     private java.util.List<java.util.Map<String, Object>> subtasks;
+    private String section = "General";
+    private String projectName = "TCS Placement Prep (19 July)";
 }
 
 
