@@ -281,7 +281,7 @@ export default function TasksPage() {
               }`}
             >
               <List size={14} />
-              <span>Section Board</span>
+              <span>Task List</span>
             </button>
             <button
               onClick={() => setActiveTab('matrix')}
@@ -292,7 +292,7 @@ export default function TasksPage() {
               }`}
             >
               <Grid size={14} />
-              <span>Eisenhower</span>
+              <span>Priority Matrix</span>
             </button>
             <button
               onClick={() => setActiveTab('kanban')}
@@ -303,7 +303,7 @@ export default function TasksPage() {
               }`}
             >
               <Columns size={14} />
-              <span>Kanban</span>
+              <span>Board View</span>
             </button>
           </div>
 
