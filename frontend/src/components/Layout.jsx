@@ -3,8 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { BookOpen, BarChart3, Settings, LogOut, Bell, Plus, Sun, Moon, Shield, Lock, Eye, CheckSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+import { useToast } from '../context/ToastContext';
+
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,6 +25,7 @@ export default function Layout() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
+    showToast(`Switched to ${nextTheme === 'light' ? 'Light' : 'Dark'} Mode`, 'info');
   };
 
   const navItems = [
@@ -33,6 +37,7 @@ export default function Layout() {
 
   const handleSignOut = () => {
     logout();
+    showToast('Signed out of MindVault', 'info');
     navigate('/login');
   };
 

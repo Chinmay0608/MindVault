@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useJournalEntries from '../hooks/useJournalEntries';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import EntryCard from '../components/EntryCard';
 import { Plus, Search, BookOpen, AlertCircle, RefreshCw, Calendar, Flame, Tag, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -19,6 +20,7 @@ export default function JournalListPage() {
     tagFilter
   });
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   // Reset page on search or tag filter changes
