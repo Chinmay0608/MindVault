@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, BarChart3, Settings, LogOut, Bell, Plus, Sun, Moon, Shield, Lock, Eye } from 'lucide-react';
+import { BookOpen, BarChart3, Settings, LogOut, Bell, Plus, Sun, Moon, Shield, Lock, Eye, CheckSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
@@ -26,6 +26,7 @@ export default function Layout() {
 
   const navItems = [
     { label: 'All Entries', icon: BookOpen, path: '/dashboard' },
+    { label: 'Tasks & Matrix', icon: CheckSquare, path: '/tasks' },
     { label: 'Analytics', icon: BarChart3, path: '/analytics' },
     { label: 'Settings', icon: Settings, path: '/settings' }
   ];

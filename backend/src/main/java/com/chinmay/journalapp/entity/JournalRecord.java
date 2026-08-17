@@ -26,6 +26,14 @@ public class JournalRecord {
     private java.util.List<String> tags;
     private Integer wordCount;
     private Integer readingTime; // In seconds
+
+    // Task Management & Eisenhower Matrix Fields
+    private com.chinmay.journalapp.enums.EntryType entryType = com.chinmay.journalapp.enums.EntryType.JOURNAL;
+    private String priority = "MEDIUM"; // HIGH, MEDIUM, LOW, NONE
+    private String status = "TODO"; // BACKLOG, TODO, IN_PROGRESS, DONE
+    private Boolean completed = false;
+    private java.time.LocalDateTime dueDate;
+    private java.util.List<java.util.Map<String, Object>> subtasks;
 }
 
 

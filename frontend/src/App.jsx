@@ -18,6 +18,7 @@ const ZeroKnowledgePage = lazy(() => import('./pages/ZeroKnowledgePage'));
 const DataAuditPage = lazy(() => import('./pages/DataAuditPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
 const Layout = lazy(() => import('./components/Layout'));
 
 const PageFallback = () => (
@@ -93,6 +94,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <AnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <TasksPage />
                   </ProtectedRoute>
                 }
               />

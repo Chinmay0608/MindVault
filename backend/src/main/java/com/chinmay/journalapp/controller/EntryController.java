@@ -415,6 +415,12 @@ public class EntryController {
                     old.setTitle(newEntry.getTitle() != null && !newEntry.getTitle().equals("") ? newEntry.getTitle() : old.getTitle());
                     old.setContent(newEntry.getContent() != null && !newEntry.getContent().equals("") ? newEntry.getContent() : old.getContent());
                     old.setSentiment(newEntry.getSentiment() != null ? newEntry.getSentiment() : old.getSentiment());
+                    if (newEntry.getEntryType() != null) old.setEntryType(newEntry.getEntryType());
+                    if (newEntry.getPriority() != null) old.setPriority(newEntry.getPriority());
+                    if (newEntry.getStatus() != null) old.setStatus(newEntry.getStatus());
+                    if (newEntry.getCompleted() != null) old.setCompleted(newEntry.getCompleted());
+                    if (newEntry.getDueDate() != null) old.setDueDate(newEntry.getDueDate());
+                    if (newEntry.getSubtasks() != null) old.setSubtasks(newEntry.getSubtasks());
                     entryService.saveEntry(old);
                     if (kafkaEnabled) {
                         try {
