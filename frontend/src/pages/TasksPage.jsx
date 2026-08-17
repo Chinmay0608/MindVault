@@ -78,7 +78,9 @@ export default function TasksPage() {
 
   const handleStatusChange = async (task, newStatus) => {
     try {
-      const updated = await journalApi.update(task.id, {
+      await journalApi.update(task.id, {
+        title: task.title,
+        content: task.content,
         status: newStatus,
         completed: newStatus === 'DONE'
       });
@@ -94,6 +96,8 @@ export default function TasksPage() {
     const newStatus = isCompleted ? 'DONE' : 'TODO';
     try {
       await journalApi.update(task.id, {
+        title: task.title,
+        content: task.content,
         completed: isCompleted,
         status: newStatus
       });

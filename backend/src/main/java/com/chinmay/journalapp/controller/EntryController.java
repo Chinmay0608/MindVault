@@ -402,7 +402,7 @@ public class EntryController {
      * @return the updated entry
      */
     @PutMapping({"id/{myId}", "/{myId}"})
-    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId myId, @jakarta.validation.Valid @RequestBody JournalRecord newEntry) {
+    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId myId, @RequestBody JournalRecord newEntry) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         UserAccount user = accountService.findByUserName(userName);
