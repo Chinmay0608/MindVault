@@ -41,12 +41,43 @@
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html.light, .light {
+  /* Backgrounds */
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-overlay: #e2e8f0;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-accent: #4f46e5;
+
+  /* Borders */
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.14);
+  --border-strong: rgba(0, 0, 0, 0.25);
+  --border-accent: rgba(99, 102, 241, 0.5);
+}
+
 @theme {
   --color-bg-primary: var(--bg-base);
   --color-bg-secondary: var(--bg-surface);
   --color-accent-primary: var(--brand-primary);
+  --color-accent-secondary: var(--brand-secondary);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-glass-bg: rgba(255, 255, 255, 0.03);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-hover: rgba(255, 255, 255, 0.06);
+  --color-positive: var(--positive);
+  --color-positive-bg: var(--positive-bg);
+  --color-negative: var(--negative);
+  --color-negative-bg: var(--negative-bg);
+  --color-neutral: var(--neutral);
+  --color-neutral-bg: var(--neutral-bg);
 }
 
 body {
@@ -58,20 +89,16 @@ body {
   padding: 0;
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* Typography scale */
-.text-xs    { font-size: 11px; line-height: 16px; }
-.text-sm    { font-size: 13px; line-height: 20px; }
-.text-base  { font-size: 15px; line-height: 24px; }
-.text-lg    { font-size: 18px; line-height: 28px; }
-.text-xl    { font-size: 22px; line-height: 32px; }
-.text-2xl   { font-size: 28px; line-height: 36px; }
-.text-3xl   { font-size: 36px; line-height: 44px; }
 
 /* Cards */
 .card {
@@ -132,13 +159,22 @@ body {
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 14px;
+  padding-right: 14px;
   color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
   outline: none;
   transition: var(--transition);
   width: 100%;
+}
+.input-icon-left {
+  padding-left: 44px !important;
+}
+.input-icon-right {
+  padding-right: 44px !important;
 }
 .input::placeholder { color: var(--text-muted); }
 .input:focus {

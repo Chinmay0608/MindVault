@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface EntryRepository extends MongoRepository<JournalRecord, ObjectId> {
+    List<JournalRecord> findByIdIn(List<ObjectId> ids);
     Page<JournalRecord> findByIdIn(List<ObjectId> ids, Pageable pageable);
     Page<JournalRecord> findByIdInAndTagsContaining(List<ObjectId> ids, String tag, Pageable pageable);
 

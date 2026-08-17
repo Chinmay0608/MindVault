@@ -25,6 +25,7 @@ public class UserAccount {
     @NonNull
     private String userName;
 
+    @Indexed(unique = true)
     private String email;
 
     private boolean sentimentAnalysis;
@@ -34,7 +35,7 @@ public class UserAccount {
     private String password;
 
     @Builder.Default
-    @DBRef
+    @DBRef(lazy = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<JournalRecord> journalEntries = new ArrayList<>();
 

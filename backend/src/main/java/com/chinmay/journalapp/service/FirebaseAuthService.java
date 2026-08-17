@@ -22,11 +22,35 @@ public class FirebaseAuthService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private final java.util.concurrent.atomic.AtomicReference<Map<?, ?>> cachedCerts = new java.util.concurrent.atomic.AtomicReference<>();
+    private volatile long lastFetchEpochSeconds = 0;
+    private static final long CACHE_TTL_SECONDS = 3600; // 1 hour
+
+    private Map<?, ?> getOrFetchCertificates() {
+        long now = System.currentTimeMillis() / 1000;
+        Map<?, ?> certs = cachedCerts.get();
+        if (certs == null || (now - lastFetchEpochSeconds) > CACHE_TTL_SECONDS) {
+            synchronized (this) {
+                now = System.currentTimeMillis() / 1000;
+                certs = cachedCerts.get();
+                if (certs == null || (now - lastFetchEpochSeconds) > CACHE_TTL_SECONDS) {
+                    String certUrl = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
+                    certs = restTemplate.getForObject(certUrl, Map.class);
+                    if (certs != null) {
+                        cachedCerts.set(certs);
+                        lastFetchEpochSeconds = now;
+                    }
+                }
+            }
+        }
+        return certs;
+    }
+
     public Claims verifyIdToken(String idToken) throws Exception {
         // 1. Decode header to find 'kid' (Key ID)
         String[] parts = idToken.split("\\.");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid JWT format");
+        if (parts.length < 3) {
+            throw new IllegalArgumentException("Invalid JWT format — expected 3 segments");
         }
         
         String headerJson = new String(Base64.getUrlDecoder().decode(parts[0]));
@@ -38,9 +62,8 @@ public class FirebaseAuthService {
             throw new IllegalArgumentException("Key ID (kid) missing from token header");
         }
 
-        // 2. Fetch Firebase X.509 public certificates
-        String certUrl = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system@system.gserviceaccount.com";
-        Map<?, ?> certs = restTemplate.getForObject(certUrl, Map.class);
+        // 2. Fetch Firebase X.509 public certificates (cached)
+        Map<?, ?> certs = getOrFetchCertificates();
         if (certs == null || !certs.containsKey(kid)) {
             throw new IllegalArgumentException("Certificate not found for key ID: " + kid);
         }

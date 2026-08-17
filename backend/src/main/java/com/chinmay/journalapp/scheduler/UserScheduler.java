@@ -34,32 +34,51 @@ public class UserScheduler {
     @Autowired
     private KafkaTemplate<String, MoodAnalysis> kafkaTemplate;
 
+    @Autowired
+    private com.chinmay.journalapp.repository.EntryRepository entryRepository;
+
     @Scheduled(cron = "0 0 9 * * SUN")
     public void fetchUsersAndSendSaMail() {
         List<UserAccount> users = userRepository.getUserForSA();
         for (UserAccount user : users) {
-            List<JournalRecord> journalEntries = user.getJournalEntries();
-            List<Sentiment> sentiments = journalEntries.stream().filter(x -> x.getDate().isAfter(LocalDateTime.now().minus(7, ChronoUnit.DAYS))).map(x -> x.getSentiment()).collect(Collectors.toList());
-            Map<Sentiment, Integer> sentimentCounts = new HashMap<>();
-            for (Sentiment sentiment : sentiments) {
-                if (sentiment != null)
-                    sentimentCounts.put(sentiment, sentimentCounts.getOrDefault(sentiment, 0) + 1);
-            }
-            Sentiment mostFrequentSentiment = null;
-            int maxCount = 0;
-            for (Map.Entry<Sentiment, Integer> entry : sentimentCounts.entrySet()) {
-                if (entry.getValue() > maxCount) {
-                    maxCount = entry.getValue();
-                    mostFrequentSentiment = entry.getKey();
+            try {
+                List<JournalRecord> userEntries = user.getJournalEntries();
+                List<org.bson.types.ObjectId> ids = (userEntries == null) ? java.util.Collections.emptyList() :
+                    userEntries.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(JournalRecord::getId)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                List<JournalRecord> journalEntries = ids.isEmpty() ? java.util.Collections.emptyList() : entryRepository.findByIdIn(ids);
+                List<Sentiment> sentiments = journalEntries.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .filter(x -> x.getDate() != null && x.getDate().isAfter(LocalDateTime.now().minus(7, ChronoUnit.DAYS)))
+                    .map(JournalRecord::getSentiment)
+                    .collect(Collectors.toList());
+                Map<Sentiment, Integer> sentimentCounts = new HashMap<>();
+                for (Sentiment sentiment : sentiments) {
+                    if (sentiment != null)
+                        sentimentCounts.put(sentiment, sentimentCounts.getOrDefault(sentiment, 0) + 1);
                 }
-            }
-            if (mostFrequentSentiment != null) {
-                MoodAnalysis sentimentData = MoodAnalysis.builder().email(user.getEmail()).sentiment("Sentiment for last 7 days " + mostFrequentSentiment).build();
-                try{
-                    kafkaTemplate.send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
-                }catch (Exception e){
-                    emailService.sendEmail(sentimentData.getEmail(), "Sentiment for previous week", sentimentData.getSentiment());
+                Sentiment mostFrequentSentiment = null;
+                int maxCount = 0;
+                for (Map.Entry<Sentiment, Integer> entry : sentimentCounts.entrySet()) {
+                    if (entry.getValue() > maxCount) {
+                        maxCount = entry.getValue();
+                        mostFrequentSentiment = entry.getKey();
+                    }
                 }
+                if (mostFrequentSentiment != null) {
+                    MoodAnalysis sentimentData = MoodAnalysis.builder().email(user.getEmail()).sentiment("Sentiment for last 7 days " + mostFrequentSentiment).build();
+                    try {
+                        kafkaTemplate.send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
+                    } catch (Exception e) {
+                        org.slf4j.LoggerFactory.getLogger(UserScheduler.class).error("Kafka send failed for user: {}", user.getEmail(), e);
+                    }
+                }
+            } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(UserScheduler.class).error("Failed to process weekly SA mail for user: {}", user != null ? user.getEmail() : "null", e);
             }
         }
     }
@@ -68,8 +87,4 @@ public class UserScheduler {
     public void clearAppCache() {
         appCache.init();
     }
-
 }
-
-
-

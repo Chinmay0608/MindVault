@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import useJournalEntries from '../hooks/useJournalEntries';
 import { useAuth } from '../context/AuthContext';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
-import { BarChart3, TrendingUp, Award, PenTool, Tag } from 'lucide-react';
+import { BarChart3, TrendingUp, Award, PenTool, Tag, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AnalyticsPage() {

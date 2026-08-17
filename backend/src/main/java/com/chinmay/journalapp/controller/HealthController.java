@@ -83,9 +83,16 @@ public class HealthController {
             
             UserAccount user = accountRepository.findByEmail(email);
             if (user == null) {
-                if (accountService.findByUserName(normalizedUsername) != null) {
-                    normalizedUsername += "_" + (int)(Math.random() * 1000);
+                String candidateUsername = normalizedUsername;
+                int attempts = 0;
+                while (accountService.findByUserName(candidateUsername) != null && attempts < 10) {
+                    attempts++;
+                    candidateUsername = normalizedUsername + "_" + (int)(Math.random() * 9000 + 1000);
                 }
+                if (accountService.findByUserName(candidateUsername) != null) {
+                    return new ResponseEntity<>(java.util.Map.of("message", "Could not assign a unique username for Firebase account"), HttpStatus.CONFLICT);
+                }
+                normalizedUsername = candidateUsername;
                 
                 user = new UserAccount();
                 user.setEmail(email);
@@ -130,54 +137,55 @@ public class HealthController {
         if (accountService.findByUserName(normalizedUsername) != null) {
             return new ResponseEntity<>(java.util.Map.of("message", "Username already taken"), HttpStatus.CONFLICT);
         }
-        if (user.getEmail() != null && accountRepository.findByEmail(user.getEmail().trim()) != null) {
+        String email = user.getEmail() != null ? user.getEmail().trim() : null;
+        if (email != null && accountRepository.findByEmail(email) != null) {
             return new ResponseEntity<>(java.util.Map.of("message", "Email already registered"), HttpStatus.CONFLICT);
         }
 
         UserAccount newUser = new UserAccount();
-        newUser.setEmail(user.getEmail().trim());
+        newUser.setEmail(email);
         newUser.setUserName(normalizedUsername);
         newUser.setPassword(user.getPassword());
         newUser.setSentimentAnalysis(user.isSentimentAnalysis());
-        boolean saved = accountService.saveNewUser(newUser);
-        if (saved) {
-            return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+
+        try {
+            boolean saved = accountService.saveNewUser(newUser);
+            if (saved) {
+                return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+            }
+            return new ResponseEntity<>(java.util.Map.of("message", "Failed to save user"), HttpStatus.BAD_REQUEST);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            return new ResponseEntity<>(java.util.Map.of("message", "Email or username already registered"), HttpStatus.CONFLICT);
         }
-        return new ResponseEntity<>(java.util.Map.of("message", "Failed to save user"), HttpStatus.BAD_REQUEST);
     }
 
     /**
      * Authenticates existing user and generates session cookies.
      * I structured this to utilize standard Spring authentication managers.
      *
-     * @param user username and password
+     * @param request login credentials DTO
      * @param response servlet response
      * @return response token mapping
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserAccount user, jakarta.servlet.http.HttpServletResponse response) {
-        try{
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUserName(), user.getPassword()));
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUserName());
-            String jwt = jwtUtil.generateToken(userDetails.getUsername());
-            
-            com.chinmay.journalapp.entity.RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUsername());
-            
-            org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refreshToken", refreshToken.getToken())
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Strict")
-                    .path("/")
-                    .maxAge(7 * 24 * 60 * 60)
-                    .build();
-            response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
-            
-            return new ResponseEntity<>(java.util.Map.of("token", jwt), HttpStatus.OK);
-        }catch (Exception e){
-            log.error("Authentication failed for user: {}", user.getUserName(), e);
-            return new ResponseEntity<>(java.util.Map.of("message", "Incorrect username or password"), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<?> login(@jakarta.validation.Valid @RequestBody com.chinmay.journalapp.dto.LoginRequest request, jakarta.servlet.http.HttpServletResponse response) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUserName(), request.getPassword()));
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUserName());
+        String jwt = jwtUtil.generateToken(userDetails.getUsername());
+        
+        com.chinmay.journalapp.entity.RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUsername());
+        
+        org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refreshToken", refreshToken.getToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
+        
+        return new ResponseEntity<>(java.util.Map.of("token", jwt), HttpStatus.OK);
     }
 
     /**
@@ -203,18 +211,14 @@ public class HealthController {
             return new ResponseEntity<>(java.util.Map.of("message", "Refresh token is missing"), HttpStatus.BAD_REQUEST);
         }
 
-        try {
-            return refreshTokenService.findByToken(token)
-                    .map(refreshTokenService::verifyExpiration)
-                    .map(com.chinmay.journalapp.entity.RefreshToken::getUsername)
-                    .map(username -> {
-                        String accessToken = jwtUtil.generateToken(username);
-                        return ResponseEntity.ok(java.util.Map.of("token", accessToken));
-                    })
-                    .orElseGet(() -> new ResponseEntity<>(java.util.Map.of("message", "Refresh token not found"), HttpStatus.BAD_REQUEST));
-        } catch (Exception ex) {
-            return new ResponseEntity<>(java.util.Map.of("message", ex.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+        return refreshTokenService.findByToken(token)
+                .map(refreshTokenService::verifyExpiration)
+                .map(com.chinmay.journalapp.entity.RefreshToken::getUsername)
+                .map(username -> {
+                    String accessToken = jwtUtil.generateToken(username);
+                    return ResponseEntity.ok(java.util.Map.of("token", accessToken));
+                })
+                .orElseGet(() -> new ResponseEntity<>(java.util.Map.of("message", "Refresh token not found"), HttpStatus.BAD_REQUEST));
     }
 
     /**

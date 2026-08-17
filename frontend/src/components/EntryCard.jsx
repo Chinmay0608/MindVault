@@ -1,5 +1,5 @@
 import SentimentBadge from './SentimentBadge';
-import { Calendar, ChevronRight, Edit3, Loader2 } from 'lucide-react';
+import { Edit3, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function EntryCard({ entry = {}, onClick = () => {} }) {
@@ -29,41 +29,41 @@ export default function EntryCard({ entry = {}, onClick = () => {} }) {
             {sentiment ? (
               <SentimentBadge sentiment={sentiment} className="scale-95 origin-left" />
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                 <Loader2 size={12} className="animate-spin" />
                 Analyzing...
               </span>
             )}
           </div>
-          <span className="text-xs text-slate-500 font-medium">{formatDate(entry.date)}</span>
+          <span className="text-xs text-[var(--text-muted)] font-medium">{formatDate(entry.date)}</span>
         </div>
 
-        {/* Title */}
-        <h3 className="font-bold text-white group-hover:text-[#818cf8] transition-colors duration-200 text-base leading-snug line-clamp-1 mb-2">
+        {/* Bug 7 Fix: Title uses var(--text-primary) so it is clearly visible in both light and dark themes */}
+        <h3 className="font-bold text-[var(--text-primary)] group-hover:text-[#818cf8] transition-colors duration-200 text-base leading-snug line-clamp-1 mb-2">
           {entry.title || 'Untitled Entry'}
         </h3>
 
         {/* Content Preview */}
-        <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-4">
+        <p className="text-sm text-[var(--text-secondary)] line-clamp-2 leading-relaxed mb-4">
           {entry.content || 'No thoughts recorded.'}
         </p>
       </div>
 
       {/* Footer: Tags + Action */}
-      <div className="flex items-center justify-between border-t border-white/[0.04] pt-4 mt-2">
+      <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-4 mt-2">
         <div className="flex flex-wrap gap-1.5 max-w-[70%]">
           {entry.tags && entry.tags.length > 0 ? (
             entry.tags.map((tag) => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05] text-slate-400">
+              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)] font-medium">
                 #{tag}
               </span>
             ))
           ) : (
-            <span className="text-[10px] text-slate-600 italic">No tags</span>
+            <span className="text-[10px] text-[var(--text-muted)] italic">No tags</span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 group-hover:text-white transition-colors">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
           <Edit3 size={12} />
           <span>edit</span>
         </div>

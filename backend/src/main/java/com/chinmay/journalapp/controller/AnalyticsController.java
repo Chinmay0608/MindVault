@@ -24,6 +24,9 @@ public class AnalyticsController {
     @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private com.chinmay.journalapp.repository.EntryRepository entryRepository;
+
     @GetMapping("/mood-trend")
     @Operation(summary = "Get mood trend analytics for the authenticated user")
     public ResponseEntity<?> getMoodTrend(@RequestParam(defaultValue = "7") int days) {
@@ -34,8 +37,26 @@ public class AnalyticsController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        List<JournalRecord> entries = user.getJournalEntries();
-        if (entries == null || entries.isEmpty()) {
+        List<JournalRecord> userEntries = user.getJournalEntries();
+        if (userEntries == null || userEntries.isEmpty()) {
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("totalEntries", 0);
+            emptyResponse.put("days", days);
+            emptyResponse.put("sentimentCounts", new HashMap<>());
+            emptyResponse.put("trend", new ArrayList<>());
+            emptyResponse.put("currentStreak", user.getCurrentStreak() == null ? 0 : user.getCurrentStreak());
+            emptyResponse.put("longestStreak", user.getLongestStreak() == null ? 0 : user.getLongestStreak());
+            return new ResponseEntity<>(emptyResponse, HttpStatus.OK);
+        }
+
+        List<org.bson.types.ObjectId> ids = userEntries.stream()
+                .filter(Objects::nonNull)
+                .map(JournalRecord::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        List<JournalRecord> entries = ids.isEmpty() ? Collections.emptyList() : entryRepository.findByIdIn(ids);
+        if (entries.isEmpty()) {
             Map<String, Object> emptyResponse = new HashMap<>();
             emptyResponse.put("totalEntries", 0);
             emptyResponse.put("days", days);

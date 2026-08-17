@@ -141,6 +141,8 @@ public class EntryController {
         List<ObjectId> ids = allEntries.stream()
                 .filter(Objects::nonNull)
                 .map(JournalRecord::getId)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
 
         String[] sortParts = sort.split(",");
@@ -203,6 +205,8 @@ public class EntryController {
         List<ObjectId> ids = allEntries.stream()
                 .filter(Objects::nonNull)
                 .map(JournalRecord::getId)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
 
         String[] sortParts = sort.split(",");
@@ -244,8 +248,17 @@ public class EntryController {
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
 
-            List<JournalRecord> entries = user.getJournalEntries();
-            List<JournalRecord> lastThree = entries.stream()
+            List<JournalRecord> userEntries = user.getJournalEntries();
+            List<ObjectId> ids = (userEntries == null) ? Collections.emptyList() :
+                userEntries.stream()
+                    .filter(Objects::nonNull)
+                    .map(JournalRecord::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            List<JournalRecord> realEntries = ids.isEmpty() ? Collections.emptyList() : entryRepository.findByIdIn(ids);
+
+            List<JournalRecord> lastThree = realEntries.stream()
                 .filter(e -> e != null && e.getSentiment() != null && e.getDate() != null)
                 .sorted((e1, e2) -> e2.getDate().compareTo(e1.getDate()))
                 .limit(3)

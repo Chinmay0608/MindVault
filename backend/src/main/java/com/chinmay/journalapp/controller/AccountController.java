@@ -44,7 +44,7 @@ public class AccountController {
         userInDb.setLocation(user.getLocation() != null ? user.getLocation() : userInDb.getLocation());
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             userInDb.setPassword(user.getPassword());
-            accountService.saveNewUser(userInDb);
+            accountService.updatePassword(userInDb);
         } else {
             accountService.saveUser(userInDb);
         }

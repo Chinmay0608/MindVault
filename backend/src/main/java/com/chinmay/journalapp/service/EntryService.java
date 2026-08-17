@@ -63,7 +63,10 @@ public class EntryService {
             if (user.getJournalEntries() == null) {
                 user.setJournalEntries(new java.util.ArrayList<>());
             }
-            user.getJournalEntries().add(saved);
+            boolean exists = user.getJournalEntries().stream().anyMatch(e -> e != null && e.getId() != null && e.getId().equals(saved.getId()));
+            if (!exists) {
+                user.getJournalEntries().add(saved);
+            }
             accountService.saveUser(user);
         } catch (Exception e) {
             throw new RuntimeException("An error occurred while saving the entry.", e);

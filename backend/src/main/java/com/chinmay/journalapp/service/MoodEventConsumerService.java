@@ -17,6 +17,9 @@ public class MoodEventConsumerService {
     private com.chinmay.journalapp.repository.AccountRepository userRepository;
 
     @Autowired
+    private com.chinmay.journalapp.repository.EntryRepository entryRepository;
+
+    @Autowired
     private ClaudeSentimentService claudeSentimentService;
 
     @KafkaListener(topics = "weekly-sentiments", groupId = "weekly-sentiment-group")
@@ -28,10 +31,18 @@ public class MoodEventConsumerService {
         String emailBody = sentimentData.getSentiment();
         try {
             com.chinmay.journalapp.entity.UserAccount user = userRepository.findByEmail(sentimentData.getEmail());
-            if (user != null) {
+            if (user != null && user.getJournalEntries() != null && !user.getJournalEntries().isEmpty()) {
+                java.util.List<org.bson.types.ObjectId> ids = user.getJournalEntries().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(com.chinmay.journalapp.entity.JournalRecord::getId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+
+                java.util.List<com.chinmay.journalapp.entity.JournalRecord> freshEntries = ids.isEmpty() ? java.util.Collections.emptyList() : entryRepository.findByIdIn(ids);
+
                 java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minus(7, java.time.temporal.ChronoUnit.DAYS);
                 java.util.List<String> entryDetails = new java.util.ArrayList<>();
-                for (com.chinmay.journalapp.entity.JournalRecord entry : user.getJournalEntries()) {
+                for (com.chinmay.journalapp.entity.JournalRecord entry : freshEntries) {
                     if (entry != null && entry.getDate() != null && entry.getDate().isAfter(sevenDaysAgo)) {
                         String detail = "- Title: " + entry.getTitle();
                         if (entry.getAiInsight() != null) {

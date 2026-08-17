@@ -1,22 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import SplashScreen from './components/SplashScreen';
 import { AnimatePresence } from 'framer-motion';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import LandingPage from './pages/LandingPage';
-import JournalListPage from './pages/JournalListPage';
-import JournalEntryPage from './pages/JournalEntryPage';
-import NewEntryPage from './pages/NewEntryPage';
-import ProfilePage from './pages/ProfilePage';
-import PrivacyShieldPage from './pages/PrivacyShieldPage';
-import ZeroKnowledgePage from './pages/ZeroKnowledgePage';
-import DataAuditPage from './pages/DataAuditPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import SettingsPage from './pages/SettingsPage';
-import Layout from './components/Layout';
+
+// Lazy-load heavy components & pages to optimize initial bundle size
+const SplashScreen = lazy(() => import('./components/SplashScreen'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const JournalListPage = lazy(() => import('./pages/JournalListPage'));
+const JournalEntryPage = lazy(() => import('./pages/JournalEntryPage'));
+const NewEntryPage = lazy(() => import('./pages/NewEntryPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const PrivacyShieldPage = lazy(() => import('./pages/PrivacyShieldPage'));
+const ZeroKnowledgePage = lazy(() => import('./pages/ZeroKnowledgePage'));
+const DataAuditPage = lazy(() => import('./pages/DataAuditPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const Layout = lazy(() => import('./components/Layout'));
+
+const PageFallback = () => (
+  <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center text-slate-400">
+    <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function AppContent() {
   const { loading } = useAuth();
@@ -39,91 +47,93 @@ function AppContent() {
 
       {/* Routes are rendered immediately underneath the splash screen to avoid mounting delay */}
       <BrowserRouter>
-        <Routes>
-          {/* Public Auth Routes without header/footer */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-
-          {/* Routes sharing the same header and footer */}
-          <Route element={<Layout />}>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            {/* Public routes without sidebar layout */}
             <Route path="/" element={<LandingPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <JournalListPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal/id/:id"
-              element={
-                <ProtectedRoute>
-                  <JournalEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/new-entry"
-              element={
-                <ProtectedRoute>
-                  <NewEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/privacy-shield"
-              element={
-                <ProtectedRoute>
-                  <PrivacyShieldPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/zero-knowledge"
-              element={
-                <ProtectedRoute>
-                  <ZeroKnowledgePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/data-audit"
-              element={
-                <ProtectedRoute>
-                  <DataAuditPage />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-          {/* Redirect rules */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            {/* Routes sharing the dashboard sidebar layout */}
+            <Route element={<Layout />}>
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <JournalListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/journal/id/:id"
+                element={
+                  <ProtectedRoute>
+                    <JournalEntryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/new-entry"
+                element={
+                  <ProtectedRoute>
+                    <NewEntryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/privacy-shield"
+                element={
+                  <ProtectedRoute>
+                    <PrivacyShieldPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/zero-knowledge"
+                element={
+                  <ProtectedRoute>
+                    <ZeroKnowledgePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/data-audit"
+                element={
+                  <ProtectedRoute>
+                    <DataAuditPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* Redirect rules */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </div>
   );

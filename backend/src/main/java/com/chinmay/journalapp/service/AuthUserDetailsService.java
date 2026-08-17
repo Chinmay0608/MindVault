@@ -21,10 +21,11 @@ public class AuthUserDetailsService implements UserDetailsService {
         }
         UserAccount user = accountRepository.findByUserName(username);
         if (user != null) {
+            java.util.List<String> roles = user.getRoles() != null && !user.getRoles().isEmpty() ? user.getRoles() : java.util.List.of("USER");
             return org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUserName())
                     .password(user.getPassword())
-                    .roles(user.getRoles().toArray(new String[0]))
+                    .roles(roles.toArray(new String[0]))
                     .build();
         }
         throw new UsernameNotFoundException("User not found with username: " + username);

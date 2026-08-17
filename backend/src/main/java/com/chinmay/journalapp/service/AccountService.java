@@ -39,6 +39,9 @@ public class AccountService {
             user.setRoles(Arrays.asList("USER"));
             accountRepository.save(user);
             return true;
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            log.error("Duplicate key conflict saving user: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Failed to save new user context: {}", e.getMessage());
             return false;
@@ -57,6 +60,22 @@ public class AccountService {
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRoles(Arrays.asList("USER", "ADMIN"));
+        accountRepository.save(user);
+    }
+
+    /**
+     * Updates an existing user password without overriding assigned roles.
+     * I added this method to prevent stripping roles (like ADMIN) during profile updates.
+     *
+     * @param user user account details with updated raw password
+     */
+    public void updatePassword(UserAccount user) {
+        if (user.getUserName() != null) {
+            user.setUserName(user.getUserName().toLowerCase().trim());
+        }
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         accountRepository.save(user);
     }
 

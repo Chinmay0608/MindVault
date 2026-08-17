@@ -43,7 +43,7 @@ export default function SentimentBadge({ sentiment, className = '' }) {
   const config = SENTIMENT_CONFIG[sentiment.toUpperCase()] || {
     label: sentiment,
     classes: 'bg-white/5 text-[#9ca3af] border-white/10',
-    icon: Smile,
+    icon: HelpCircle,
   };
   const Icon = config.icon;
 

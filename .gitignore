@@ -35,3 +35,21 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Reports, Audits & Lighthouse Performance Logs
+*.report.html
+*.report.json
+*.report.csv
+*report*.html
+*report*.json
+lighthouse*
+pagespeed*
+htmlReport/
+**/htmlReport/
+**/reports/
+**/surefire-reports/
+**/failsafe-reports/
+**/jacoco/
+**/coverage/
+**/coverage-final.json
+
